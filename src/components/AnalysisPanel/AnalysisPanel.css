@@ -1,0 +1,180 @@
+.analysis-panel {
+  margin-bottom: 32px;
+  padding: 24px;
+
+  background: white;
+
+  border: 1px solid #ddd;
+  border-radius: 14px;
+}
+
+.analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 24px;
+
+  margin-bottom: 24px;
+}
+
+.analysis-header h2 {
+  margin: 0 0 6px;
+}
+
+.analysis-header p {
+  margin: 0;
+
+  color: #666;
+}
+
+.analysis-summary {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  color: #555;
+
+  font-size: 14px;
+}
+
+.analysis-panel > h3 {
+  margin: 0 0 16px;
+}
+
+
+/* =========================
+   RANGERING
+========================= */
+
+.setup-ranking {
+  display: grid;
+  gap: 12px;
+}
+
+.setup-ranking-card {
+  display: grid;
+
+  grid-template-columns:
+    auto minmax(0, 1fr) auto;
+
+  align-items: center;
+
+  gap: 18px;
+
+  padding: 16px;
+
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+
+  background: #fafafa;
+}
+
+.setup-ranking-position {
+  min-width: 36px;
+
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.setup-ranking-info h4 {
+  margin: 0 0 5px;
+
+  font-size: 17px;
+}
+
+.setup-ranking-info p {
+  margin: 0;
+
+  color: #666;
+
+  font-size: 14px;
+}
+
+.setup-ranking-stats {
+  display: flex;
+
+  gap: 24px;
+}
+
+.setup-ranking-stats > div {
+  display: flex;
+  flex-direction: column;
+
+  align-items: flex-end;
+
+  gap: 2px;
+}
+
+.setup-ranking-stats strong {
+  font-size: 16px;
+}
+
+.setup-ranking-stats span {
+  color: #777;
+
+  font-size: 12px;
+}
+
+
+/* =========================
+   TOM ANALYSE
+========================= */
+
+.analysis-empty {
+  padding: 30px;
+
+  text-align: center;
+
+  border: 1px dashed #ccc;
+  border-radius: 10px;
+}
+
+.analysis-empty p {
+  margin: 0 0 5px;
+
+  font-weight: 600;
+}
+
+.analysis-empty span {
+  color: #777;
+
+  font-size: 14px;
+}
+
+
+/* =========================
+   MOBIL
+========================= */
+
+@media (max-width: 800px) {
+  .analysis-header {
+    flex-direction: column;
+  }
+
+  .setup-ranking-card {
+    grid-template-columns:
+      auto 1fr;
+  }
+
+  .setup-ranking-stats {
+    grid-column: 1 / -1;
+
+    justify-content: space-between;
+  }
+
+  .setup-ranking-stats > div {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 500px) {
+  .analysis-panel {
+    padding: 18px;
+  }
+
+  .setup-ranking-stats {
+    gap: 12px;
+  }
+}

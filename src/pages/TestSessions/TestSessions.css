@@ -1,0 +1,199 @@
+.active-session-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(320px, 1fr)
+    );
+
+  gap: 18px;
+}
+
+.active-session-card {
+  display: flex;
+  flex-direction: column;
+
+  padding: 22px;
+
+  border: 1px solid #ddd;
+  border-radius: 14px;
+
+  background: white;
+}
+
+.active-session-card-header {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 20px;
+}
+
+.active-session-card-header h2 {
+  margin: 0 0 5px;
+
+  font-size: 21px;
+}
+
+.active-session-card-header p {
+  margin: 0;
+
+  color: #666;
+}
+
+.active-session-date {
+  display: flex;
+  flex-direction: column;
+
+  align-items: flex-end;
+
+  gap: 3px;
+
+  white-space: nowrap;
+
+  font-size: 13px;
+}
+
+.active-session-date span {
+  color: #777;
+}
+
+
+/* =========================
+   FORHOLD
+========================= */
+
+.active-session-conditions {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 7px;
+
+  margin-top: 18px;
+}
+
+.active-session-conditions span {
+  padding: 6px 9px;
+
+  border: 1px solid #e5e5e5;
+  border-radius: 999px;
+
+  background: #f5f5f5;
+
+  font-size: 12px;
+}
+
+
+/* =========================
+   STATISTIKK
+========================= */
+
+.active-session-stats {
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  margin-top: 20px;
+
+  color: #555;
+
+  font-size: 14px;
+}
+
+
+/* =========================
+   FREMDRIFT
+========================= */
+
+.active-session-progress {
+  margin-top: 18px;
+}
+
+.active-session-progress-top {
+  display: flex;
+
+  justify-content: space-between;
+
+  margin-bottom: 7px;
+
+  font-size: 12px;
+}
+
+.active-session-progress-top span {
+  color: #777;
+}
+
+.active-session-progress-track {
+  width: 100%;
+  height: 7px;
+
+  overflow: hidden;
+
+  border-radius: 999px;
+
+  background: #e5e5e5;
+}
+
+.active-session-progress-value {
+  height: 100%;
+
+  border-radius: inherit;
+
+  background: #222;
+
+  transition: width 0.2s ease;
+}
+
+
+/* =========================
+   ÅPNE
+========================= */
+
+.active-session-open {
+  display: block;
+
+  margin-top: 22px;
+  padding: 11px 16px;
+
+  border-radius: 8px;
+
+  background: #222;
+
+  color: white;
+
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.active-session-open:hover {
+  background: #444;
+}
+
+
+/* =========================
+   MOBIL
+========================= */
+
+@media (max-width: 600px) {
+  .active-session-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .active-session-card {
+    padding: 18px;
+  }
+
+  .active-session-card-header {
+    flex-direction: column;
+
+    gap: 10px;
+  }
+
+  .active-session-date {
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,161 @@
+.session-edit-form {
+  padding: 20px;
+
+  border: 1px solid #ddd;
+  border-radius: 12px;
+
+  background: #f8f8f8;
+}
+
+.session-edit-form-header {
+  margin-bottom: 20px;
+}
+
+.session-edit-form-header h3 {
+  margin: 0 0 5px;
+}
+
+.session-edit-form-header p {
+  margin: 0;
+
+  color: #666;
+  font-size: 14px;
+}
+
+
+/* =========================
+   GRID
+========================= */
+
+.session-edit-form-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 18px 20px;
+}
+
+
+/* =========================
+   FELT
+========================= */
+
+.session-edit-form-field {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+.session-edit-form-field label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.session-edit-form-field input,
+.session-edit-form-field select {
+  width: 100%;
+
+  padding: 10px 12px;
+
+  border: 1px solid #ccc;
+  border-radius: 8px;
+
+  background: white;
+
+  font: inherit;
+}
+
+.session-edit-form-field input:focus,
+.session-edit-form-field select:focus {
+  outline: none;
+
+  border-color: #555;
+}
+
+
+/* =========================
+   TALL + ENHET
+========================= */
+
+.session-edit-number-input {
+  display: flex;
+  align-items: center;
+}
+
+.session-edit-number-input input {
+  padding-right: 40px;
+}
+
+.session-edit-number-input span {
+  margin-left: -32px;
+
+  color: #777;
+  font-size: 13px;
+
+  pointer-events: none;
+}
+
+
+/* =========================
+   KNAPPER
+========================= */
+
+.session-edit-form-actions {
+  display: flex;
+
+  gap: 10px;
+
+  margin-top: 22px;
+}
+
+.session-edit-form-actions button {
+  padding: 10px 16px;
+
+  border-radius: 8px;
+
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.session-edit-save {
+  border: none;
+
+  background: #222;
+  color: white;
+}
+
+.session-edit-save:hover {
+  background: #444;
+}
+
+.session-edit-cancel {
+  border: 1px solid #ccc;
+
+  background: white;
+  color: #333;
+}
+
+.session-edit-cancel:hover {
+  background: #eee;
+}
+
+
+/* =========================
+   MOBIL
+========================= */
+
+@media (max-width: 700px) {
+  .session-edit-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .session-edit-form-actions {
+    flex-direction: column;
+  }
+
+  .session-edit-form-actions button {
+    width: 100%;
+  }
+}

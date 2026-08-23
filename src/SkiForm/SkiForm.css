@@ -1,0 +1,57 @@
+.ski-form {
+  margin-top: 28px;
+  padding: 22px;
+  border: 1px dashed #ccc;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.ski-form h3 {
+  margin-top: 0;
+}
+
+.ski-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ski-form-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ski-form label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ski-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.ski-form button {
+  margin-top: 18px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #222;
+  color: white;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .ski-form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .ski-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,58 @@
+.session-form {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+}
+
+.session-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.session-form-field label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.session-form-field input,
+.session-form-field select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: white;
+}
+
+.session-form-field input:focus,
+.session-form-field select:focus {
+  outline: none;
+  border-color: #555;
+}
+
+.session-form-submit {
+  grid-column: 1 / -1;
+  width: fit-content;
+
+  padding: 11px 18px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #222;
+  color: white;
+
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 700px) {
+  .session-form {
+    grid-template-columns: 1fr;
+  }
+
+  .session-form-submit {
+    width: 100%;
+  }
+}
