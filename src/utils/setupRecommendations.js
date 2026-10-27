@@ -5,6 +5,28 @@ import {
 const PRIOR_WEIGHT = 3
 const PRIOR_WIN_RATE = 0.5
 
+// =========================
+// NORMALISERING
+// =========================
+
+function normalizeText(
+  value
+) {
+  if (
+    typeof value !== 'string'
+  ) {
+    return ''
+  }
+
+  return value
+    .trim()
+    .toLowerCase()
+}
+
+// =========================
+// SAMMENLIGN ID-ER
+// =========================
+
 function idsAreEqual(
   idA,
   idB
@@ -15,271 +37,494 @@ function idsAreEqual(
   )
 }
 
-function normalizeText(value) {
-  return String(
-    value ?? ''
-  )
-    .trim()
-    .toLowerCase()
-}
+// =========================
+// OPPSETT-FELTER
+// =========================
 
-function createSetupKey(ski) {
-  return [
-    normalizeText(ski.grind),
-    normalizeText(ski.rill),
-    normalizeText(
-      ski.glideWax
-    ),
-    normalizeText(
-      ski.topping
-    ),
-  ].join('|')
-}
+const SETUP_PARTS = [
+  {
+    nameField: 'grind',
+    idField: 'grindId',
+  },
+  {
+    nameField: 'rill',
+    idField: 'rillId',
+  },
+  {
+    nameField: 'glideWax',
+    idField: 'glideWaxId',
+  },
+  {
+    nameField: 'topping',
+    idField: 'toppingId',
+  },
+]
 
-function createSetup(ski) {
-  return {
-    grind:
-      ski.grind?.trim() ?? '',
+// =========================
+// HAR SKIEN OPPSETT?
+// =========================
 
-    rill:
-      ski.rill?.trim() ?? '',
-
-    glideWax:
-      ski.glideWax?.trim() ?? '',
-
-    topping:
-      ski.topping?.trim() ?? '',
-  }
-}
-
-function hasSetupData(ski) {
-  return Boolean(
-    ski.grind?.trim() ||
-      ski.rill?.trim() ||
-      ski.glideWax?.trim() ||
-      ski.topping?.trim()
-  )
-}
-
-function getOrCreateResult(
-  results,
+function hasSetupData(
   ski
 ) {
-  const key =
-    createSetupKey(ski)
-
-  if (!results.has(key)) {
-    results.set(key, {
-      key,
-
-      setup:
-        createSetup(ski),
-
-      comparisons: 0,
-      wins: 0,
-
-      weightedComparisons: 0,
-      weightedWins: 0,
-
-      weightedScore: 0,
-
-      relevantSessions:
-        new Set(),
-    })
+  if (!ski) {
+    return false
   }
 
-  return results.get(key)
+  return SETUP_PARTS.some(
+    ({
+      nameField,
+      idField,
+    }) => {
+      const id =
+        ski[idField]
+
+      const name =
+        normalizeText(
+          ski[nameField]
+        )
+
+      return (
+        (
+          id !== null &&
+          id !== undefined &&
+          id !== ''
+        ) ||
+        name !== ''
+      )
+    }
+  )
 }
 
-export function getSetupRecommendations(
-  sessions,
-  targetConditions,
-  options = {}
+// =========================
+// IDENTITET FOR EN DEL
+// =========================
+
+function getSetupPartIdentity(
+  ski,
+  idField,
+  nameField
 ) {
-  const minimumSimilarity =
-    options.minimumSimilarity ??
-    50
+  const id =
+    ski?.[idField]
 
-  const results =
-    new Map()
-
-  for (const session of sessions) {
-    const similarity =
-      calculateConditionSimilarity(
-        targetConditions,
-        session.conditions ?? {}
-      )
-
-    if (
-      similarity <
-      minimumSimilarity
-    ) {
-      continue
-    }
-
-    const weight =
-      similarity / 100
-
-    for (
-      const comparison of
-      session.comparisons ?? []
-    ) {
-      const skiA =
-        session.skis?.find(
-          (ski) =>
-            idsAreEqual(
-              ski.id,
-              comparison.skiAId
-            )
-        )
-
-      const skiB =
-        session.skis?.find(
-          (ski) =>
-            idsAreEqual(
-              ski.id,
-              comparison.skiBId
-            )
-        )
-
-      if (!skiA || !skiB) {
-        continue
-      }
-
-      if (
-        !hasSetupData(skiA) ||
-        !hasSetupData(skiB)
-      ) {
-        continue
-      }
-
-      const setupAKey =
-        createSetupKey(skiA)
-
-      const setupBKey =
-        createSetupKey(skiB)
-
-      /*
-       * Hvis begge skiene har
-       * nøyaktig samme oppsett,
-       * lærer vi ingenting om hvilket
-       * oppsett som er best.
-       */
-      if (
-        setupAKey ===
-        setupBKey
-      ) {
-        continue
-      }
-
-      const resultA =
-        getOrCreateResult(
-          results,
-          skiA
-        )
-
-      const resultB =
-        getOrCreateResult(
-          results,
-          skiB
-        )
-
-      resultA.comparisons += 1
-      resultB.comparisons += 1
-
-      resultA.weightedComparisons +=
-        weight
-
-      resultB.weightedComparisons +=
-        weight
-
-      resultA.relevantSessions.add(
-        session.id
-      )
-
-      resultB.relevantSessions.add(
-        session.id
-      )
-
-      // =====================
-      // VINNER
-      // =====================
-
-      if (
-        idsAreEqual(
-          comparison.winnerId,
-          skiA.id
-        )
-      ) {
-        resultA.wins += 1
-
-        resultA.weightedWins +=
-          weight
-      }
-
-      if (
-        idsAreEqual(
-          comparison.winnerId,
-          skiB.id
-        )
-      ) {
-        resultB.wins += 1
-
-        resultB.weightedWins +=
-          weight
-      }
-
-      // =====================
-      // SCORE
-      // =====================
-
-      const score =
-        Number(
-          comparison.calculatedScore
-        )
-
-      if (
-        Number.isFinite(score)
-      ) {
-        /*
-         * Positiv calculatedScore
-         * betyr fordel Ski A.
-         *
-         * For Ski B snur vi derfor
-         * fortegnet.
-         */
-        resultA.weightedScore +=
-          score * weight
-
-        resultB.weightedScore +=
-          -score * weight
-      }
-    }
+  /*
+   * ID prioriteres.
+   *
+   * Hvis produktet senere
+   * får nytt navn, vil tester
+   * fortsatt vite at dette er
+   * samme produkt.
+   */
+  if (
+    id !== null &&
+    id !== undefined &&
+    id !== ''
+  ) {
+    return `id:${String(id)}`
   }
 
-  return [
-    ...results.values(),
-  ]
-    .map((result) => {
-      const rawWinRate =
-        result.comparisons > 0
-          ? (
-              result.wins /
-              result.comparisons
-            ) * 100
-          : 0
+  /*
+   * Eldre tester har kanskje
+   * ikke ID. Da bruker vi navn
+   * som fallback.
+   */
+  const name =
+    normalizeText(
+      ski?.[nameField]
+    )
 
-      /*
-       * Vi legger inn en svak
-       * "50/50-prior".
-       *
-       * Dermed vil ikke et oppsett
-       * med 1 seier av 1 automatisk
-       * se sikrere ut enn et oppsett
-       * med 18 seire av 25.
-       */
-      const adjustedWinRate =
-        (
+  if (name) {
+    return `name:${name}`
+  }
+
+  return 'none'
+}
+
+// =========================
+// UNIK NØKKEL FOR OPPSETT
+// =========================
+
+function getSetupKey(
+  ski
+) {
+  if (
+    !hasSetupData(ski)
+  ) {
+    return null
+  }
+
+  return SETUP_PARTS
+    .map(
+      ({
+        nameField,
+        idField,
+      }) =>
+        getSetupPartIdentity(
+          ski,
+          idField,
+          nameField
+        )
+    )
+    .join('|')
+}
+
+// =========================
+// OPPSETT SOM SKAL VISES
+// =========================
+
+function getSetupSnapshot(
+  ski
+) {
+  return {
+    grindId:
+      ski.grindId ?? null,
+
+    grind:
+      ski.grind ?? '',
+
+    rillId:
+      ski.rillId ?? null,
+
+    rill:
+      ski.rill ?? '',
+
+    glideWaxId:
+      ski.glideWaxId ??
+      null,
+
+    glideWax:
+      ski.glideWax ?? '',
+
+    toppingId:
+      ski.toppingId ??
+      null,
+
+    topping:
+      ski.topping ?? '',
+  }
+}
+
+// =========================
+// RESULTAT FOR ET OPPSETT
+// =========================
+
+function createSetupResult(
+  ski,
+  setupKey
+) {
+  return {
+    setupKey,
+
+    setup:
+      getSetupSnapshot(
+        ski
+      ),
+
+    comparisons: 0,
+    wins: 0,
+
+    weightedComparisons: 0,
+    weightedWins: 0,
+    weightedScore: 0,
+
+    relevantSessions:
+      new Set(),
+  }
+}
+
+// =========================
+// SCORE FRA SKIENS PERSPEKTIV
+// =========================
+
+function getScoreForSki(
+  comparison,
+  skiId
+) {
+  const score =
+    Number(
+      comparison.calculatedScore
+    ) || 0
+
+  if (
+    idsAreEqual(
+      comparison.skiAId,
+      skiId
+    )
+  ) {
+    return score
+  }
+
+  if (
+    idsAreEqual(
+      comparison.skiBId,
+      skiId
+    )
+  ) {
+    return -score
+  }
+
+  return 0
+}
+
+// =========================
+// REGISTRER ÉN SKI
+// =========================
+
+function addComparisonResult({
+  result,
+  ski,
+  comparison,
+  session,
+  weight,
+}) {
+  result.comparisons += 1
+
+  result.weightedComparisons +=
+    weight
+
+  result.weightedScore +=
+    getScoreForSki(
+      comparison,
+      ski.id
+    ) * weight
+
+  result.relevantSessions.add(
+    session.id
+  )
+
+  if (
+    idsAreEqual(
+      comparison.winnerId,
+      ski.id
+    )
+  ) {
+    result.wins += 1
+
+    result.weightedWins +=
+      weight
+  }
+}
+
+// =========================
+// ANBEFALINGER
+// =========================
+
+export function getSetupRecommendations({
+  sessions = [],
+  conditions = {},
+  minimumSimilarity = 50,
+}) {
+  const setupResults =
+    new Map()
+
+  sessions.forEach(
+    (session) => {
+      const similarity =
+        calculateConditionSimilarity(
+          session.conditions ?? {},
+          conditions
+        )
+
+      if (
+        similarity <
+        minimumSimilarity
+      ) {
+        return
+      }
+
+      const weight =
+        similarity / 100
+
+      const skis =
+        session.skis ?? []
+
+      const comparisons =
+        session.comparisons ??
+        []
+
+      comparisons.forEach(
+        (comparison) => {
+          const skiA =
+            skis.find(
+              (ski) =>
+                idsAreEqual(
+                  ski.id,
+                  comparison.skiAId
+                )
+            )
+
+          const skiB =
+            skis.find(
+              (ski) =>
+                idsAreEqual(
+                  ski.id,
+                  comparison.skiBId
+                )
+            )
+
+          if (
+            !skiA ||
+            !skiB
+          ) {
+            return
+          }
+
+          const setupKeyA =
+            getSetupKey(
+              skiA
+            )
+
+          const setupKeyB =
+            getSetupKey(
+              skiB
+            )
+
+          /*
+           * Vi trenger faktisk
+           * oppsettdata for begge.
+           */
+          if (
+            !setupKeyA ||
+            !setupKeyB
+          ) {
+            return
+          }
+
+          /*
+           * Hvis begge ski har
+           * identisk oppsett gir
+           * duellen ingen informasjon
+           * om hvilket oppsett som
+           * er best.
+           */
+          if (
+            setupKeyA ===
+            setupKeyB
+          ) {
+            return
+          }
+
+          /*
+           * En duell uten registrert
+           * vinner brukes ikke.
+           */
+          if (
+            comparison.winnerId ===
+              null ||
+            comparison.winnerId ===
+              undefined ||
+            comparison.winnerId ===
+              ''
+          ) {
+            return
+          }
+
+          // =====================
+          // OPPSETT A
+          // =====================
+
+          if (
+            !setupResults.has(
+              setupKeyA
+            )
+          ) {
+            setupResults.set(
+              setupKeyA,
+              createSetupResult(
+                skiA,
+                setupKeyA
+              )
+            )
+          }
+
+          // =====================
+          // OPPSETT B
+          // =====================
+
+          if (
+            !setupResults.has(
+              setupKeyB
+            )
+          ) {
+            setupResults.set(
+              setupKeyB,
+              createSetupResult(
+                skiB,
+                setupKeyB
+              )
+            )
+          }
+
+          const resultA =
+            setupResults.get(
+              setupKeyA
+            )
+
+          const resultB =
+            setupResults.get(
+              setupKeyB
+            )
+
+          addComparisonResult({
+            result:
+              resultA,
+
+            ski:
+              skiA,
+
+            comparison,
+
+            session,
+
+            weight,
+          })
+
+          addComparisonResult({
+            result:
+              resultB,
+
+            ski:
+              skiB,
+
+            comparison,
+
+            session,
+
+            weight,
+          })
+        }
+      )
+    }
+  )
+
+  // =========================
+  // BEREGN SLUTTRESULTAT
+  // =========================
+
+  const recommendations =
+    Array.from(
+      setupResults.values()
+    ).map(
+      (result) => {
+        const rawWinRate =
+          result.comparisons >
+          0
+            ? (
+                result.wins /
+                result.comparisons
+              ) *
+              100
+            : 0
+
+        /*
+         * Vi bruker en liten prior
+         * slik at f.eks. 1 seier av
+         * 1 test ikke automatisk
+         * blir vurdert som 100 %
+         * sikkert.
+         */
+        const adjustedWinRate =
           (
             result.weightedWins +
             PRIOR_WIN_RATE *
@@ -288,60 +533,68 @@ export function getSetupRecommendations(
           (
             result.weightedComparisons +
             PRIOR_WEIGHT
+          ) *
+          100
+
+        const weightedAverageScore =
+          result.weightedComparisons >
+          0
+            ? result.weightedScore /
+              result.weightedComparisons
+            : 0
+
+        /*
+         * Rundt åtte godt matchende
+         * sammenligninger gir foreløpig
+         * full datatillit.
+         */
+        const dataConfidence =
+          Math.min(
+            100,
+            (
+              result.weightedComparisons /
+              8
+            ) *
+              100
           )
-        ) * 100
 
-      const weightedAverageScore =
-        result.weightedComparisons >
-        0
-          ? result.weightedScore /
-            result.weightedComparisons
-          : 0
+        return {
+          setupKey:
+            result.setupKey,
 
-      /*
-       * Rundt 8 fullt vektede
-       * sammenligninger gir høy
-       * datatillit.
-       */
-      const dataConfidence =
-        Math.min(
-          100,
-          (
-            result.weightedComparisons /
-            8
-          ) * 100
-        )
+          setup:
+            result.setup,
 
-      return {
-        ...result,
+          comparisons:
+            result.comparisons,
 
-        relevantSessionCount:
-          result.relevantSessions
-            .size,
+          wins:
+            result.wins,
 
-        rawWinRate:
-          Math.round(
-            rawWinRate
-          ),
+          rawWinRate,
 
-        adjustedWinRate:
-          Math.round(
-            adjustedWinRate
-          ),
+          adjustedWinRate,
 
-        weightedAverageScore:
-          Math.round(
-            weightedAverageScore *
-              10
-          ) / 10,
+          weightedComparisons:
+            result.weightedComparisons,
 
-        dataConfidence:
-          Math.round(
-            dataConfidence
-          ),
+          weightedAverageScore,
+
+          dataConfidence,
+
+          relevantSessionCount:
+            result.relevantSessions
+              .size,
+        }
       }
-    })
-    .sort((a, b) => {
+    )
+
+  // =========================
+  // SORTERING
+  // =========================
+
+  return recommendations.sort(
+    (a, b) => {
       if (
         b.adjustedWinRate !==
         a.adjustedWinRate
@@ -366,5 +619,6 @@ export function getSetupRecommendations(
         b.weightedComparisons -
         a.weightedComparisons
       )
-    })
+    }
+  )
 }

@@ -539,4 +539,103 @@
     grid-template-columns: 1fr;
   }
 }
+/* =========================
+   TEMPERATURMATCH
+========================= */
+
+.analysis-temperature-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(220px, 1fr)
+    );
+
+  gap: 14px;
+}
+
+.analysis-temperature-card {
+  padding: 18px;
+
+  border: 1px solid #ddd;
+  border-radius: 12px;
+
+  background: white;
+}
+
+.analysis-temperature-card h3 {
+  margin: 5px 0 12px;
+}
+
+.analysis-temperature-card p {
+  margin: 0 0 10px;
+
+  color: #555;
+}
+
+.analysis-temperature-card strong {
+  font-size: 13px;
+}
+
+.analysis-temperature-type {
+  color: #777;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  text-transform: uppercase;
+}
+
+
+/* =========================
+   TEMPERATURSTATUS
+========================= */
+
+.analysis-temperature-status {
+  width: fit-content;
+
+  margin: 12px 0;
+
+  padding: 6px 9px;
+
+  border-radius: 7px;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  background: #f1f1f1;
+}
+
+.analysis-temperature-status.match {
+  background: #edf7ed;
+}
+
+.analysis-temperature-status.outside {
+  background: #fff2e8;
+}
+
+.analysis-temperature-status.unknown {
+  color: #666;
+}
+/* =========================
+   ANBEFALINGSSCORE
+========================= */
+
+.analysis-score-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 8px 16px;
+
+  margin: 10px 0 12px;
+
+  color: #666;
+
+  font-size: 12px;
+}
+
+.analysis-score-breakdown strong {
+  color: #222;
+}
 }

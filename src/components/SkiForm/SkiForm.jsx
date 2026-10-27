@@ -3,68 +3,108 @@ import {
   useState,
 } from 'react'
 
-import SetupInput from '../SetupInput/SetupInput'
-
 import {
   SETUP_FIELDS,
-  getSetupSuggestions,
 } from '../../config/setupFields'
 
 import './SkiForm.css'
 
-function getNextSkiNumber(existingSkis) {
-  const usedNumbers = new Set(
-    existingSkis.map(
-      (ski) => Number(ski.skiNumber)
+// =========================
+// NESTE LEDIGE SKINUMMER
+// =========================
+
+function getNextSkiNumber(
+  existingSkis
+) {
+  const usedNumbers =
+    new Set(
+      existingSkis.map(
+        (ski) =>
+          Number(
+            ski.skiNumber
+          )
+      )
     )
-  )
 
   let number = 1
 
-  while (usedNumbers.has(number)) {
+  while (
+    usedNumbers.has(number)
+  ) {
     number += 1
   }
 
   return number
 }
 
+// =========================
+// VISNINGSNAVN PÅ UTSTYR
+// =========================
+
+function getEquipmentName(
+  item
+) {
+  const name =
+    item.name?.trim() ?? ''
+
+  const brand =
+    item.brand?.trim() ?? ''
+
+  if (brand) {
+    return `${brand} ${name}`
+  }
+
+  return name
+}
+
+// =========================
+// SKIFORM
+// =========================
+
 function SkiForm({
   onAddSki,
   existingSkis = [],
+  equipment = [],
 }) {
-  const [formData, setFormData] =
-    useState(() => ({
-      skiNumber:
-        getNextSkiNumber(
-          existingSkis
-        ),
+  const [
+    formData,
+    setFormData,
+  ] = useState(() => ({
+    skiNumber:
+      getNextSkiNumber(
+        existingSkis
+      ),
 
-      grind: '',
-      rill: '',
-      glideWax: '',
-      topping: '',
-    }))
+    grindId: '',
+    rillId: '',
+    glideWaxId: '',
+    toppingId: '',
+  }))
 
   // =========================
-  // NESTE LEDIGE SKINUMMER
+  // NESTE SKINUMMER
   // =========================
 
   useEffect(() => {
-    setFormData((currentData) => ({
-      ...currentData,
+    setFormData(
+      (currentData) => ({
+        ...currentData,
 
-      skiNumber:
-        getNextSkiNumber(
-          existingSkis
-        ),
-    }))
+        skiNumber:
+          getNextSkiNumber(
+            existingSkis
+          ),
+      })
+    )
   }, [existingSkis])
 
   // =========================
   // INPUT
   // =========================
 
-  function handleChange(event) {
+  function handleChange(
+    event
+  ) {
     const {
       name,
       value,
@@ -79,14 +119,60 @@ function SkiForm({
   }
 
   // =========================
-  // LAGRE
+  // UTSTYR FOR EN TYPE
   // =========================
 
-  function handleSubmit(event) {
+  function getEquipmentForType(
+    type
+  ) {
+    return equipment
+      .filter(
+        (item) =>
+          item.type === type
+      )
+      .sort(
+        (a, b) =>
+          getEquipmentName(a)
+            .localeCompare(
+              getEquipmentName(b),
+              'nb'
+            )
+      )
+  }
+
+  // =========================
+  // FINN VALGT UTSTYR
+  // =========================
+
+  function getSelectedEquipment(
+    id
+  ) {
+    if (!id) {
+      return null
+    }
+
+    return (
+      equipment.find(
+        (item) =>
+          String(item.id) ===
+          String(id)
+      ) ?? null
+    )
+  }
+
+  // =========================
+  // LAGRE SKI
+  // =========================
+
+  function handleSubmit(
+    event
+  ) {
     event.preventDefault()
 
     const skiNumber =
-      Number(formData.skiNumber)
+      Number(
+        formData.skiNumber
+      )
 
     if (
       !skiNumber ||
@@ -102,11 +188,14 @@ function SkiForm({
     const numberAlreadyExists =
       existingSkis.some(
         (ski) =>
-          Number(ski.skiNumber) ===
-          skiNumber
+          Number(
+            ski.skiNumber
+          ) === skiNumber
       )
 
-    if (numberAlreadyExists) {
+    if (
+      numberAlreadyExists
+    ) {
       alert(
         `Ski ${skiNumber} finnes allerede.`
       )
@@ -118,30 +207,47 @@ function SkiForm({
       id: Date.now(),
 
       skiNumber,
-
-      grind:
-        formData.grind.trim(),
-
-      rill:
-        formData.rill.trim(),
-
-      glideWax:
-        formData.glideWax.trim(),
-
-      topping:
-        formData.topping.trim(),
     }
 
-    onAddSki(newSki)
+    SETUP_FIELDS.forEach(
+      (field) => {
+        const equipmentId =
+          formData[
+            field.idField
+          ]
+
+        const selectedItem =
+          getSelectedEquipment(
+            equipmentId
+          )
+
+        newSki[
+          field.idField
+        ] =
+          selectedItem?.id ??
+          null
+
+        newSki[field.name] =
+          selectedItem
+            ? getEquipmentName(
+                selectedItem
+              )
+            : ''
+      }
+    )
+
+    onAddSki(
+      newSki
+    )
 
     setFormData(
       (currentData) => ({
         ...currentData,
 
-        grind: '',
-        rill: '',
-        glideWax: '',
-        topping: '',
+        grindId: '',
+        rillId: '',
+        glideWaxId: '',
+        toppingId: '',
       })
     )
   }
@@ -149,9 +255,13 @@ function SkiForm({
   return (
     <form
       className="ski-form"
-      onSubmit={handleSubmit}
+      onSubmit={
+        handleSubmit
+      }
     >
-      <h3>Legg til ski</h3>
+      <h3>
+        Legg til ski
+      </h3>
 
       <div className="ski-form-grid">
         <div>
@@ -174,35 +284,69 @@ function SkiForm({
         </div>
 
         {SETUP_FIELDS.map(
-          (field) => (
-            <SetupInput
-              key={field.name}
+          (field) => {
+            const options =
+              getEquipmentForType(
+                field.name
+              )
 
-              name={field.name}
-              label={field.label}
-
-              value={
-                formData[
+            return (
+              <div
+                key={
                   field.name
-                ]
-              }
+                }
+              >
+                <label>
+                  {field.label}:
+                </label>
 
-              placeholder={
-                field.placeholder
-              }
+                <select
+                  name={
+                    field.idField
+                  }
+                  value={
+                    formData[
+                      field.idField
+                    ]
+                  }
+                  onChange={
+                    handleChange
+                  }
+                >
+                  <option value="">
+                    Ikke valgt
+                  </option>
 
-              suggestions={
-                getSetupSuggestions(
-                  existingSkis,
-                  field.name
-                )
-              }
+                  {options.map(
+                    (item) => (
+                      <option
+                        key={
+                          item.id
+                        }
+                        value={
+                          item.id
+                        }
+                      >
+                        {getEquipmentName(
+                          item
+                        )}
+                      </option>
+                    )
+                  )}
+                </select>
 
-              onChange={
-                handleChange
-              }
-            />
-          )
+                {options.length ===
+                  0 && (
+                  <small className="ski-form-no-equipment">
+                    Ingen{' '}
+                    {field.label.toLowerCase()}{' '}
+                    registrert under
+                    Utstyr.
+                  </small>
+                )}
+              </div>
+            )
+          }
         )}
       </div>
 

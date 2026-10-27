@@ -1,0 +1,300 @@
+.equipment-form-header {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 20px;
+
+  margin-bottom: 22px;
+}
+
+.equipment-form-header h2 {
+  margin: 0 0 5px;
+}
+
+.equipment-form-header p {
+  margin: 0;
+
+  color: #666;
+}
+
+.equipment-cancel-button {
+  padding: 8px 12px;
+
+  border: 1px solid #ccc;
+  border-radius: 8px;
+
+  background: white;
+
+  cursor: pointer;
+}
+
+
+/* =========================
+   FORM
+========================= */
+
+.equipment-form {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 18px 20px;
+}
+
+.equipment-field {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+.equipment-field label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.equipment-field input,
+.equipment-field select,
+.equipment-field textarea {
+  width: 100%;
+
+  padding: 10px 12px;
+
+  border: 1px solid #ccc;
+  border-radius: 8px;
+
+  background: white;
+
+  font: inherit;
+}
+
+.equipment-field input:focus,
+.equipment-field select:focus,
+.equipment-field textarea:focus {
+  outline: none;
+
+  border-color: #555;
+}
+
+.equipment-notes-field {
+  grid-column: 1 / -1;
+}
+
+.equipment-temperature-input {
+  display: flex;
+  align-items: center;
+}
+
+.equipment-temperature-input input {
+  padding-right: 42px;
+}
+
+.equipment-temperature-input span {
+  margin-left: -34px;
+
+  color: #777;
+
+  pointer-events: none;
+}
+
+.equipment-save-button {
+  grid-column: 1 / -1;
+
+  width: fit-content;
+
+  padding: 11px 18px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #222;
+  color: white;
+
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+
+/* =========================
+   KATALOG
+========================= */
+
+.equipment-catalog {
+  margin-top: 30px;
+}
+
+.equipment-catalog-heading {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 16px;
+}
+
+.equipment-catalog-heading h2 {
+  margin: 0;
+}
+
+.equipment-catalog-heading span {
+  color: #777;
+
+  font-size: 14px;
+}
+
+.equipment-groups {
+  display: grid;
+  gap: 28px;
+}
+
+.equipment-group-heading {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  margin-bottom: 12px;
+}
+
+.equipment-group-heading h3 {
+  margin: 0;
+}
+
+.equipment-group-heading span {
+  padding: 3px 8px;
+
+  border-radius: 999px;
+
+  background: #eee;
+
+  font-size: 12px;
+}
+
+.equipment-group-empty {
+  color: #777;
+}
+
+.equipment-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(240px, 1fr)
+    );
+
+  gap: 14px;
+}
+
+
+/* =========================
+   KORT
+========================= */
+
+.equipment-card {
+  padding: 18px;
+
+  border: 1px solid #ddd;
+  border-radius: 12px;
+
+  background: white;
+}
+
+.equipment-type-label {
+  color: #777;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  text-transform: uppercase;
+}
+
+.equipment-card h4 {
+  margin: 4px 0;
+}
+
+.equipment-card-top p {
+  margin: 0;
+
+  color: #666;
+  font-size: 13px;
+}
+
+.equipment-temperature {
+  margin-top: 14px;
+
+  font-size: 13px;
+}
+
+.equipment-notes {
+  margin-top: 12px;
+
+  color: #666;
+
+  font-size: 13px;
+}
+
+.equipment-card-actions {
+  display: flex;
+
+  gap: 8px;
+
+  margin-top: 16px;
+}
+
+.equipment-card-actions button {
+  padding: 7px 10px;
+
+  border: 1px solid #ccc;
+  border-radius: 7px;
+
+  background: white;
+
+  cursor: pointer;
+}
+
+.equipment-card-actions button:last-child {
+  color: #b42318;
+}
+
+.equipment-empty h3 {
+  margin-top: 0;
+}
+
+
+/* =========================
+   MOBIL
+========================= */
+
+@media (max-width: 700px) {
+  .equipment-form {
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-notes-field,
+  .equipment-save-button {
+    grid-column: auto;
+  }
+
+  .equipment-save-button {
+    width: 100%;
+  }
+
+  .equipment-form-header {
+    flex-direction: column;
+  }
+
+  .equipment-field-hint {
+    margin-top: 2px;
+
+    color: #777;
+
+    font-size: 11px;
+    line-height: 1.4;
+    }
+}

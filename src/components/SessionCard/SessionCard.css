@@ -365,4 +365,212 @@
   .session-edit-panel form {
     grid-template-columns: 1fr;
   }
+
+  /* =========================
+   SKI I TESTØKT
+========================= */
+
+.ski-section {
+  margin-top: 28px;
+}
+
+.ski-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 16px;
+
+  margin-bottom: 16px;
+}
+
+.ski-section-header h3 {
+  margin: 0 0 5px;
+}
+
+.ski-section-header p {
+  margin: 0;
+
+  color: #666;
+  font-size: 14px;
+}
+
+.ski-empty-message {
+  color: #777;
+}
+
+
+/* =========================
+   SKILISTE
+========================= */
+
+.ski-list {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(250px, 1fr)
+    );
+
+  gap: 16px;
+
+  margin-bottom: 24px;
+}
+
+.ski-item {
+  padding: 18px;
+
+  border: 1px solid #ddd;
+  border-radius: 12px;
+
+  background: #fafafa;
+}
+
+.ski-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 16px;
+}
+
+.ski-item-header h4 {
+  margin: 0;
+
+  font-size: 20px;
+}
+
+.ski-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 6px;
+}
+
+.ski-item-actions button {
+  margin: 0;
+}
+
+.ski-item-actions button:last-child {
+  color: #b42318;
+}
+
+.ski-details {
+  margin-top: 14px;
+}
+
+.ski-details p {
+  margin: 7px 0;
+}
+
+
+/* =========================
+   REDIGER SKI
+========================= */
+
+.ski-edit-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap: 14px;
+}
+
+.ski-edit-grid > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+.ski-edit-grid label {
+  margin: 0;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ski-edit-grid input,
+.ski-edit-grid select {
+  width: 100%;
+  max-width: none;
+
+  padding: 10px 12px;
+
+  border: 1px solid #ccc;
+  border-radius: 8px;
+
+  background: white;
+
+  font: inherit;
+}
+
+.ski-edit-grid input:focus,
+.ski-edit-grid select:focus {
+  outline: none;
+
+  border-color: #555;
+}
+
+.ski-edit-actions {
+  display: flex;
+
+  gap: 8px;
+
+  margin-top: 16px;
+}
+
+.ski-edit-actions button {
+  margin: 0;
+}
+
+.ski-edit-actions button:first-child {
+  background: #222;
+  border-color: #222;
+  color: white;
+}
+
+.ski-edit-actions button:first-child:hover {
+  background: #444;
+}
+
+
+/* =========================
+   MOBIL
+========================= */
+
+@media (max-width: 700px) {
+  .ski-list {
+    grid-template-columns: 1fr;
+  }
+
+  .ski-item-header {
+    flex-direction: column;
+  }
+
+  .ski-item-actions {
+    width: 100%;
+  }
+
+  .ski-item-actions button {
+    flex: 1;
+  }
+
+  .ski-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ski-edit-actions {
+    width: 100%;
+  }
+
+  .ski-edit-actions button {
+    flex: 1;
+  }
+}
 }

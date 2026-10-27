@@ -16,40 +16,86 @@ import TestSessionDetail from './pages/TestSessionDetail/TestSessionDetail'
 import History from './pages/History/History'
 import HistoryDetail from './pages/HistoryDetail/HistoryDetail'
 import Analysis from './pages/Analysis/Analysis'
+import Equipment from './pages/Equipment/Equipment'
 
 function App() {
-  const [sessions, setSessions] =
-    useState(() => {
-      const savedSessions =
-        localStorage.getItem(
-          'skiSessions'
-        )
+  // =========================
+  // TESTØKTER
+  // =========================
 
-      if (savedSessions) {
-        return JSON.parse(
-          savedSessions
-        )
-      }
+  const [
+    sessions,
+    setSessions,
+  ] = useState(() => {
+    const savedSessions =
+      localStorage.getItem(
+        'skiSessions'
+      )
 
-      return []
-    })
+    if (savedSessions) {
+      return JSON.parse(
+        savedSessions
+      )
+    }
+
+    return []
+  })
 
   // =========================
-  // LAGRE I LOCALSTORAGE
+  // UTSTYR
+  // =========================
+
+  const [
+    equipment,
+    setEquipment,
+  ] = useState(() => {
+    const savedEquipment =
+      localStorage.getItem(
+        'skiEquipment'
+      )
+
+    if (savedEquipment) {
+      return JSON.parse(
+        savedEquipment
+      )
+    }
+
+    return []
+  })
+
+  // =========================
+  // LAGRE TESTØKTER
   // =========================
 
   useEffect(() => {
     localStorage.setItem(
       'skiSessions',
-      JSON.stringify(sessions)
+      JSON.stringify(
+        sessions
+      )
     )
   }, [sessions])
+
+  // =========================
+  // LAGRE UTSTYR
+  // =========================
+
+  useEffect(() => {
+    localStorage.setItem(
+      'skiEquipment',
+      JSON.stringify(
+        equipment
+      )
+    )
+  }, [equipment])
 
   // =========================
   // TESTØKTER
   // =========================
 
-  function addSession(newSession) {
+  function addSession(
+    newSession
+  ) {
     setSessions(
       (currentSessions) => [
         ...currentSessions,
@@ -73,26 +119,33 @@ function App() {
     )
   }
 
-  function deleteSession(sessionId) {
+  function deleteSession(
+    sessionId
+  ) {
     setSessions(
       (currentSessions) =>
         currentSessions.filter(
           (session) =>
-            session.id !== sessionId
+            session.id !==
+            sessionId
         )
     )
   }
 
-  function completeSession(sessionId) {
+  function completeSession(
+    sessionId
+  ) {
     setSessions(
       (currentSessions) =>
         currentSessions.map(
           (session) =>
-            session.id === sessionId
+            session.id ===
+            sessionId
               ? {
                   ...session,
 
-                  status: 'completed',
+                  status:
+                    'completed',
 
                   completedAt:
                     new Date()
@@ -103,23 +156,29 @@ function App() {
     )
   }
 
-  function reopenSession(sessionId) {
+  function reopenSession(
+    sessionId
+  ) {
     setSessions(
       (currentSessions) =>
         currentSessions.map(
           (session) =>
-            session.id === sessionId
+            session.id ===
+            sessionId
               ? {
                   ...session,
 
-                  status: 'active',
+                  status:
+                    'active',
 
-                  completedAt: null,
+                  completedAt:
+                    null,
                 }
               : session
         )
     )
   }
+  
 
   // =========================
   // SKI
@@ -134,7 +193,8 @@ function App() {
         currentSessions.map(
           (session) => {
             if (
-              session.id !== sessionId
+              session.id !==
+              sessionId
             ) {
               return session
             }
@@ -148,9 +208,10 @@ function App() {
               ],
 
               /*
-               * Legger vi til en ski etter
-               * at testingen har startet,
-               * må turneringen bygges på nytt.
+               * Hvis en ski legges til
+               * etter at testingen har
+               * startet, må turneringen
+               * bygges opp på nytt.
                */
               comparisons: [],
             }
@@ -160,88 +221,130 @@ function App() {
   }
 
   function updateSkiInSession(
-  sessionId,
-  updatedSki
-) {
-  setSessions(
-    (currentSessions) =>
-      currentSessions.map(
-        (session) => {
-          if (
-            session.id !==
-            sessionId
-          ) {
-            return session
-          }
+    sessionId,
+    updatedSki
+  ) {
+    setSessions(
+      (currentSessions) =>
+        currentSessions.map(
+          (session) => {
+            if (
+              session.id !==
+              sessionId
+            ) {
+              return session
+            }
 
-          const oldSki =
-            session.skis.find(
-              (ski) =>
-                ski.id ===
-                updatedSki.id
-            )
-
-          if (!oldSki) {
-            return session
-          }
-
-          // =====================
-          // HAR TESTRELEVANTE DATA
-          // BLITT ENDRET?
-          // =====================
-
-          const skiChanged =
-            Number(
-              oldSki.skiNumber
-            ) !==
-              Number(
-                updatedSki.skiNumber
-              ) ||
-
-            (oldSki.grind ?? '') !==
-              (updatedSki.grind ??
-                '') ||
-
-            (oldSki.rill ?? '') !==
-              (updatedSki.rill ??
-                '') ||
-
-            (oldSki.glideWax ??
-              '') !==
-              (updatedSki.glideWax ??
-                '') ||
-
-            (oldSki.topping ?? '') !==
-              (updatedSki.topping ??
-                '')
-
-          return {
-            ...session,
-
-            skis:
-              session.skis.map(
+            const oldSki =
+              session.skis.find(
                 (ski) =>
                   ski.id ===
                   updatedSki.id
-                    ? updatedSki
-                    : ski
-              ),
+              )
 
-            /*
-             * Hvis skioppsettet er
-             * endret, er gamle
-             * sammenligninger ikke
-             * lenger gyldige.
-             */
-            comparisons:
-              skiChanged
-                ? []
-                : session.comparisons,
+            if (!oldSki) {
+              return session
+            }
+
+            // =====================
+            // HAR TESTRELEVANTE DATA
+            // BLITT ENDRET?
+            // =====================
+
+            const skiChanged =
+              Number(
+                oldSki.skiNumber
+              ) !==
+                Number(
+                  updatedSki.skiNumber
+                ) ||
+
+              String(
+                oldSki.grindId ?? ''
+              ) !==
+                String(
+                  updatedSki.grindId ??
+                    ''
+                ) ||
+
+              String(
+                oldSki.rillId ?? ''
+              ) !==
+                String(
+                  updatedSki.rillId ??
+                    ''
+                ) ||
+
+              String(
+                oldSki.glideWaxId ??
+                  ''
+              ) !==
+                String(
+                  updatedSki.glideWaxId ??
+                    ''
+                ) ||
+
+              String(
+                oldSki.toppingId ??
+                  ''
+              ) !==
+                String(
+                  updatedSki.toppingId ??
+                    ''
+                ) ||
+
+              (oldSki.grind ?? '') !==
+                (
+                  updatedSki.grind ??
+                  ''
+                ) ||
+
+              (oldSki.rill ?? '') !==
+                (
+                  updatedSki.rill ??
+                  ''
+                ) ||
+
+              (oldSki.glideWax ??
+                '') !==
+                (
+                  updatedSki.glideWax ??
+                  ''
+                ) ||
+
+              (oldSki.topping ??
+                '') !==
+                (
+                  updatedSki.topping ??
+                  ''
+                )
+
+            return {
+              ...session,
+
+              skis:
+                session.skis.map(
+                  (ski) =>
+                    ski.id ===
+                    updatedSki.id
+                      ? updatedSki
+                      : ski
+                ),
+
+              /*
+               * Hvis oppsettet endres,
+               * er gamle sammenligninger
+               * ikke lenger gyldige.
+               */
+              comparisons:
+                skiChanged
+                  ? []
+                  : session.comparisons,
+            }
           }
-        }
-      )
-  )
-}
+        )
+    )
+  }
 
   function deleteSkiFromSession(
     sessionId,
@@ -252,7 +355,8 @@ function App() {
         currentSessions.map(
           (session) => {
             if (
-              session.id !== sessionId
+              session.id !==
+              sessionId
             ) {
               return session
             }
@@ -263,7 +367,8 @@ function App() {
               skis:
                 session.skis.filter(
                   (ski) =>
-                    ski.id !== skiId
+                    ski.id !==
+                    skiId
                 ),
 
               comparisons: [],
@@ -286,7 +391,8 @@ function App() {
         currentSessions.map(
           (session) => {
             if (
-              session.id !== sessionId
+              session.id !==
+              sessionId
             ) {
               return session
             }
@@ -313,7 +419,8 @@ function App() {
         currentSessions.map(
           (session) => {
             if (
-              session.id !== sessionId
+              session.id !==
+              sessionId
             ) {
               return session
             }
@@ -334,9 +441,10 @@ function App() {
               updatedComparison.winnerId
 
             /*
-             * Hvis vinneren av en tidligere
-             * duell endres, er senere runder
-             * ikke lenger gyldige.
+             * Hvis vinneren av en
+             * tidligere duell endres,
+             * er senere runder ikke
+             * lenger gyldige.
              */
             if (winnerChanged) {
               return {
@@ -385,7 +493,8 @@ function App() {
         currentSessions.map(
           (session) => {
             if (
-              session.id !== sessionId
+              session.id !==
+              sessionId
             ) {
               return session
             }
@@ -397,12 +506,14 @@ function App() {
                   comparisonId
               )
 
-            if (!deletedComparison) {
+            if (
+              !deletedComparison
+            ) {
               return session
             }
 
             /*
-             * Sletter vi en duell,
+             * Hvis vi sletter en duell,
              * slettes også senere runder.
              */
             return {
@@ -423,13 +534,57 @@ function App() {
   }
 
   // =========================
+  // UTSTYR
+  // =========================
+
+  function addEquipment(
+    newEquipment
+  ) {
+    setEquipment(
+      (currentEquipment) => [
+        ...currentEquipment,
+        newEquipment,
+      ]
+    )
+  }
+
+  function updateEquipment(
+    updatedEquipment
+  ) {
+    setEquipment(
+      (currentEquipment) =>
+        currentEquipment.map(
+          (item) =>
+            item.id ===
+            updatedEquipment.id
+              ? updatedEquipment
+              : item
+        )
+    )
+  }
+
+  function deleteEquipment(
+    equipmentId
+  ) {
+    setEquipment(
+      (currentEquipment) =>
+        currentEquipment.filter(
+          (item) =>
+            item.id !==
+            equipmentId
+        )
+    )
+  }
+
+  // =========================
   // FERDIGE TESTER TIL ANALYSE
   // =========================
 
   const completedSessions =
     sessions.filter(
       (session) =>
-        session.status === 'completed'
+        session.status ===
+        'completed'
     )
 
   // =========================
@@ -441,7 +596,10 @@ function App() {
       <Navigation />
 
       <Routes>
-        {/* Forsiden sender oss til Testøkter */}
+        {/* =====================
+            FORSIDE
+        ===================== */}
+
         <Route
           path="/"
           element={
@@ -460,8 +618,12 @@ function App() {
           path="/testokter"
           element={
             <TestSessions
-              sessions={sessions}
-              onAddSession={addSession}
+              sessions={
+                sessions
+              }
+              onAddSession={
+                addSession
+              }
             />
           }
         />
@@ -471,6 +633,7 @@ function App() {
           element={
             <TestSessionDetail
               sessions={sessions}
+              equipment={equipment}
 
               onUpdateSession={
                 updateSession
@@ -519,7 +682,9 @@ function App() {
           path="/historikk"
           element={
             <History
-              sessions={sessions}
+              sessions={
+                sessions
+              }
 
               onReopenSession={
                 reopenSession
@@ -532,7 +697,9 @@ function App() {
           path="/historikk/:sessionId"
           element={
             <HistoryDetail
-              sessions={sessions}
+              sessions={
+                sessions
+              }
             />
           }
         />
@@ -548,11 +715,44 @@ function App() {
               sessions={
                 completedSessions
               }
+              equipment={
+                equipment
+              }
             />
           }
         />
 
-        {/* Ukjent URL */}
+        {/* =====================
+            UTSTYR
+        ===================== */}
+
+        <Route
+          path="/utstyr"
+          element={
+            <Equipment
+              equipment={
+                equipment
+              }
+
+              onAddEquipment={
+                addEquipment
+              }
+
+              onUpdateEquipment={
+                updateEquipment
+              }
+
+              onDeleteEquipment={
+                deleteEquipment
+              }
+            />
+          }
+        />
+
+        {/* =====================
+            UKJENT URL
+        ===================== */}
+
         <Route
           path="*"
           element={

@@ -44,6 +44,13 @@ function Navigation() {
           >
             Analyse
           </NavLink>
+
+          <NavLink
+            to="/utstyr"
+            className={getLinkClass}
+          >
+            Utstyr
+          </NavLink>
         </div>
       </div>
     </nav>

@@ -1,9 +1,32 @@
-import { useState } from 'react'
+import {
+  useState,
+} from 'react'
 
 import SkiForm from '../SkiForm/SkiForm'
 
+import {
+  SETUP_FIELDS,
+} from '../../config/setupFields'
+
+function getEquipmentName(
+  item
+) {
+  const name =
+    item.name?.trim() ?? ''
+
+  const brand =
+    item.brand?.trim() ?? ''
+
+  if (brand) {
+    return `${brand} ${name}`
+  }
+
+  return name
+}
+
 function SkiSection({
   session,
+  equipment = [],
 
   onAddSki,
   onUpdateSki,
@@ -19,19 +42,74 @@ function SkiSection({
     setEditedSki,
   ] = useState(null)
 
+  function getEquipmentForType(
+    type
+  ) {
+    return equipment
+      .filter(
+        (item) =>
+          item.type === type
+      )
+      .sort(
+        (a, b) =>
+          getEquipmentName(a)
+            .localeCompare(
+              getEquipmentName(b),
+              'nb'
+            )
+      )
+  }
+
+  function findEquipmentById(
+    id
+  ) {
+    if (!id) {
+      return null
+    }
+
+    return (
+      equipment.find(
+        (item) =>
+          String(item.id) ===
+          String(id)
+      ) ?? null
+    )
+  }
+
+  function findEquipmentByName(
+    type,
+    name
+  ) {
+    if (!name) {
+      return null
+    }
+
+    return (
+      equipment.find(
+        (item) =>
+          item.type ===
+            type &&
+          getEquipmentName(
+            item
+          ) === name
+      ) ?? null
+    )
+  }
+
   // =========================
   // LEGG TIL SKI
   // =========================
 
-  function handleAddSki(newSki) {
+  function handleAddSki(
+    newSki
+  ) {
     if (
-      session.comparisons.length > 0
+      session.comparisons
+        ?.length > 0
     ) {
       const confirmed =
         window.confirm(
-          'Du har allerede startet testingen.\n\n' +
-            'Hvis du legger til en ny ski, nullstilles alle sammenligningene.\n\n' +
-            'Vil du fortsette?'
+          'Du har allerede startet testingen. Hvis du legger til en ny ski, slettes alle registrerte dueller og turneringen starter på nytt. Vil du fortsette?'
         )
 
       if (!confirmed) {
@@ -49,19 +127,69 @@ function SkiSection({
   // START REDIGERING
   // =========================
 
-  function startEditingSki(ski) {
-    setEditingSkiId(ski.id)
-
-    setEditedSki({
+  function startEditingSki(
+    ski
+  ) {
+    const editableSki = {
       ...ski,
-    })
+    }
+
+    /*
+     * Gamle ski kan mangle
+     * equipment-ID.
+     *
+     * Hvis navnet matcher et
+     * katalogprodukt, finner vi
+     * ID-en automatisk.
+     */
+    SETUP_FIELDS.forEach(
+      (field) => {
+        if (
+          editableSki[
+            field.idField
+          ]
+        ) {
+          return
+        }
+
+        const matchingItem =
+          findEquipmentByName(
+            field.name,
+            editableSki[
+              field.name
+            ]
+          )
+
+        if (matchingItem) {
+          editableSki[
+            field.idField
+          ] =
+            matchingItem.id
+        }
+      }
+    )
+
+    setEditingSkiId(
+      ski.id
+    )
+
+    setEditedSki(
+      editableSki
+    )
+  }
+
+  function cancelEditingSki() {
+    setEditingSkiId(null)
+    setEditedSki(null)
   }
 
   // =========================
   // INPUT
   // =========================
 
-  function handleSkiChange(event) {
+  function handleEditChange(
+    event
+  ) {
     const {
       name,
       value,
@@ -70,43 +198,52 @@ function SkiSection({
     setEditedSki(
       (currentSki) => ({
         ...currentSki,
-
         [name]: value,
       })
     )
   }
 
   // =========================
-  // SJEKK OM OPPSETT ER ENDRET
+  // HAR SKIEN ENDRET SEG?
   // =========================
 
   function hasSkiChanged(
     originalSki,
     updatedSki
   ) {
-    if (!originalSki) {
-      return false
-    }
-
-    return (
+    if (
       Number(
         originalSki.skiNumber
       ) !==
-        Number(
-          updatedSki.skiNumber
-        ) ||
+      Number(
+        updatedSki.skiNumber
+      )
+    ) {
+      return true
+    }
 
-      (originalSki.grind ?? '') !==
-        (updatedSki.grind ?? '') ||
-
-      (originalSki.rill ?? '') !==
-        (updatedSki.rill ?? '') ||
-
-      (originalSki.glideWax ?? '') !==
-        (updatedSki.glideWax ?? '') ||
-
-      (originalSki.topping ?? '') !==
-        (updatedSki.topping ?? '')
+    return SETUP_FIELDS.some(
+      (field) =>
+        String(
+          originalSki[
+            field.idField
+          ] ?? ''
+        ) !==
+          String(
+            updatedSki[
+              field.idField
+            ] ?? ''
+          ) ||
+        (
+          originalSki[
+            field.name
+          ] ?? ''
+        ) !==
+          (
+            updatedSki[
+              field.name
+            ] ?? ''
+          )
     )
   }
 
@@ -135,22 +272,19 @@ function SkiSection({
       return
     }
 
-    // -------------------------
-    // DUPLIKAT
-    // -------------------------
-
-    const numberAlreadyExists =
+    const duplicateNumber =
       session.skis.some(
         (ski) =>
           ski.id !==
-            editingSkiId &&
-
+            editedSki.id &&
           Number(
             ski.skiNumber
           ) === skiNumber
       )
 
-    if (numberAlreadyExists) {
+    if (
+      duplicateNumber
+    ) {
       alert(
         `Ski ${skiNumber} finnes allerede.`
       )
@@ -158,58 +292,70 @@ function SkiSection({
       return
     }
 
-    // -------------------------
-    // NORMALISER DATA
-    // -------------------------
-
     const updatedSki = {
       ...editedSki,
-
       skiNumber,
-
-      grind:
-        editedSki.grind?.trim() ??
-        '',
-
-      rill:
-        editedSki.rill?.trim() ??
-        '',
-
-      glideWax:
-        editedSki.glideWax?.trim() ??
-        '',
-
-      topping:
-        editedSki.topping?.trim() ??
-        '',
     }
+
+    /*
+     * Oppdater både ID og
+     * historisk visningsnavn.
+     */
+    SETUP_FIELDS.forEach(
+      (field) => {
+        const selectedItem =
+          findEquipmentById(
+            editedSki[
+              field.idField
+            ]
+          )
+
+        updatedSki[
+          field.idField
+        ] =
+          selectedItem?.id ??
+          null
+
+        updatedSki[
+          field.name
+        ] =
+          selectedItem
+            ? getEquipmentName(
+                selectedItem
+              )
+            : ''
+      }
+    )
 
     const originalSki =
       session.skis.find(
         (ski) =>
           ski.id ===
-          editingSkiId
+          editedSki.id
       )
 
-    const skiChanged =
+    if (!originalSki) {
+      return
+    }
+
+    const changed =
       hasSkiChanged(
         originalSki,
         updatedSki
       )
 
-    // -------------------------
-    // TESTING ER ALLEREDE STARTET
-    // -------------------------
+    if (!changed) {
+      cancelEditingSki()
+      return
+    }
 
     if (
-      skiChanged &&
-      session.comparisons.length > 0
+      session.comparisons
+        ?.length > 0
     ) {
       const confirmed =
         window.confirm(
-          'Du har allerede startet testingen.\n\n' +
-            'Hvis du endrer denne skien nå, vil alle registrerte sammenligninger bli nullstilt fordi de ble utført med det gamle skioppsettet.\n\n' +
-            'Vil du fortsette?'
+          'Denne skien er allerede brukt i testingen. Hvis du endrer skioppsettet, slettes alle registrerte dueller og turneringen starter på nytt. Vil du fortsette?'
         )
 
       if (!confirmed) {
@@ -217,56 +363,36 @@ function SkiSection({
       }
     }
 
-    // -------------------------
-    // INGEN ENDRING
-    // -------------------------
-
-    if (!skiChanged) {
-      setEditingSkiId(null)
-      setEditedSki(null)
-
-      return
-    }
-
-    // -------------------------
-    // LAGRE
-    // -------------------------
-
     onUpdateSki(
       session.id,
       updatedSki
     )
 
-    setEditingSkiId(null)
-    setEditedSki(null)
+    cancelEditingSki()
   }
 
   // =========================
-  // AVBRYT REDIGERING
+  // SLETT
   // =========================
 
-  function cancelEditingSki() {
-    setEditingSkiId(null)
-    setEditedSki(null)
-  }
-
-  // =========================
-  // SLETT SKI
-  // =========================
-
-  function handleDeleteSki(ski) {
+  function handleDeleteSki(
+    ski
+  ) {
     let message =
-      `Er du sikker på at du vil slette Ski ${ski.skiNumber}?`
+      `Vil du slette Ski ${ski.skiNumber}?`
 
     if (
-      session.comparisons.length > 0
+      session.comparisons
+        ?.length > 0
     ) {
       message +=
-        '\n\nAlle sammenligninger i testøkten blir også nullstilt.'
+        '\n\nAlle registrerte dueller vil også bli slettet fordi turneringen må bygges på nytt.'
     }
 
     const confirmed =
-      window.confirm(message)
+      window.confirm(
+        message
+      )
 
     if (!confirmed) {
       return
@@ -276,256 +402,243 @@ function SkiSection({
       session.id,
       ski.id
     )
+
+    if (
+      editingSkiId ===
+      ski.id
+    ) {
+      cancelEditingSki()
+    }
   }
 
-  // =========================
-  // UI
-  // =========================
-
   return (
-    <>
-      <h3>
-        Ski i testøkten
-      </h3>
+    <section className="ski-section">
+      <div className="ski-section-header">
+        <div>
+          <h3>
+            Ski i testen
+          </h3>
 
-      {session.skis.length === 0 && (
-        <p>
-          Ingen ski registrert ennå.
-        </p>
-      )}
-
-      <div className="session-card-ski-grid">
-        {[...session.skis]
-          .sort(
-            (a, b) =>
-              Number(
-                a.skiNumber
-              ) -
-              Number(
-                b.skiNumber
-              )
-          )
-          .map((ski) => (
-            <div
-              key={ski.id}
-              className="session-card-ski"
-            >
-              {editingSkiId ===
-              ski.id ? (
-                <div>
-                  <h4>
-                    Rediger Ski{' '}
-                    {ski.skiNumber}
-                  </h4>
-
-                  <div>
-                    <label>
-                      Ski nummer:
-                    </label>
-
-                    <input
-                      type="number"
-                      min="1"
-
-                      name="skiNumber"
-
-                      value={
-                        editedSki
-                          .skiNumber
-                      }
-
-                      onChange={
-                        handleSkiChange
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label>
-                      Slip / struktur:
-                    </label>
-
-                    <input
-                      type="text"
-
-                      name="grind"
-
-                      value={
-                        editedSki
-                          .grind ?? ''
-                      }
-
-                      onChange={
-                        handleSkiChange
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label>
-                      Rill:
-                    </label>
-
-                    <input
-                      type="text"
-
-                      name="rill"
-
-                      value={
-                        editedSki
-                          .rill ?? ''
-                      }
-
-                      onChange={
-                        handleSkiChange
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label>
-                      Glider:
-                    </label>
-
-                    <input
-                      type="text"
-
-                      name="glideWax"
-
-                      value={
-                        editedSki
-                          .glideWax ?? ''
-                      }
-
-                      onChange={
-                        handleSkiChange
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label>
-                      Topping:
-                    </label>
-
-                    <input
-                      type="text"
-
-                      name="topping"
-
-                      value={
-                        editedSki
-                          .topping ?? ''
-                      }
-
-                      onChange={
-                        handleSkiChange
-                      }
-                    />
-                  </div>
-
-                  <div className="session-card-ski-actions">
-                    <button
-                      type="button"
-
-                      onClick={
-                        saveEditedSki
-                      }
-                    >
-                      Lagre
-                    </button>
-
-                    <button
-                      type="button"
-
-                      onClick={
-                        cancelEditingSki
-                      }
-                    >
-                      Avbryt
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <h4>
-                    Ski{' '}
-                    {ski.skiNumber}
-                  </h4>
-
-                  <p>
-                    <strong>
-                      Slip:
-                    </strong>{' '}
-                    {ski.grind ||
-                      'Ikke registrert'}
-                  </p>
-
-                  <p>
-                    <strong>
-                      Rill:
-                    </strong>{' '}
-                    {ski.rill ||
-                      'Ikke registrert'}
-                  </p>
-
-                  <p>
-                    <strong>
-                      Glider:
-                    </strong>{' '}
-                    {ski.glideWax ||
-                      'Ikke registrert'}
-                  </p>
-
-                  <p>
-                    <strong>
-                      Topping:
-                    </strong>{' '}
-                    {ski.topping ||
-                      'Ikke registrert'}
-                  </p>
-
-                  <div className="session-card-ski-actions">
-                    <button
-                      type="button"
-
-                      onClick={() =>
-                        startEditingSki(
-                          ski
-                        )
-                      }
-                    >
-                      Rediger
-                    </button>
-
-                    <button
-                      type="button"
-
-                      onClick={() =>
-                        handleDeleteSki(
-                          ski
-                        )
-                      }
-                    >
-                      Slett
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+          <p>
+            {session.skis.length}{' '}
+            ski registrert
+          </p>
+        </div>
       </div>
+
+      {session.skis.length ===
+      0 ? (
+        <p className="ski-empty-message">
+          Ingen ski er lagt til
+          ennå.
+        </p>
+      ) : (
+        <div className="ski-list">
+          {session.skis.map(
+            (ski) => {
+              const isEditing =
+                editingSkiId ===
+                ski.id
+
+              return (
+                <article
+                  key={ski.id}
+                  className="ski-item"
+                >
+                  {isEditing ? (
+                    <>
+                      <div className="ski-edit-grid">
+                        <div>
+                          <label>
+                            Ski nummer
+                          </label>
+
+                          <input
+                            type="number"
+                            min="1"
+                            name="skiNumber"
+                            value={
+                              editedSki
+                                ?.skiNumber ??
+                              ''
+                            }
+                            onChange={
+                              handleEditChange
+                            }
+                          />
+                        </div>
+
+                        {SETUP_FIELDS.map(
+                          (field) => {
+                            const options =
+                              getEquipmentForType(
+                                field.name
+                              )
+
+                            return (
+                              <div
+                                key={
+                                  field.name
+                                }
+                              >
+                                <label>
+                                  {
+                                    field.label
+                                  }
+                                </label>
+
+                                <select
+                                  name={
+                                    field.idField
+                                  }
+                                  value={
+                                    editedSki?.[
+                                      field
+                                        .idField
+                                    ] ?? ''
+                                  }
+                                  onChange={
+                                    handleEditChange
+                                  }
+                                >
+                                  <option value="">
+                                    Ikke valgt
+                                  </option>
+
+                                  {options.map(
+                                    (
+                                      item
+                                    ) => (
+                                      <option
+                                        key={
+                                          item.id
+                                        }
+                                        value={
+                                          item.id
+                                        }
+                                      >
+                                        {getEquipmentName(
+                                          item
+                                        )}
+                                      </option>
+                                    )
+                                  )}
+                                </select>
+                              </div>
+                            )
+                          }
+                        )}
+                      </div>
+
+                      <div className="ski-edit-actions">
+                        <button
+                          type="button"
+                          onClick={
+                            saveEditedSki
+                          }
+                        >
+                          Lagre
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={
+                            cancelEditingSki
+                          }
+                        >
+                          Avbryt
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="ski-item-header">
+                        <h4>
+                          Ski{' '}
+                          {
+                            ski.skiNumber
+                          }
+                        </h4>
+
+                        <div className="ski-item-actions">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              startEditingSki(
+                                ski
+                              )
+                            }
+                          >
+                            Rediger
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteSki(
+                                ski
+                              )
+                            }
+                          >
+                            Slett
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="ski-details">
+                        <p>
+                          <strong>
+                            Slip:
+                          </strong>{' '}
+                          {ski.grind ||
+                            'Ikke valgt'}
+                        </p>
+
+                        <p>
+                          <strong>
+                            Rill:
+                          </strong>{' '}
+                          {ski.rill ||
+                            'Ikke valgt'}
+                        </p>
+
+                        <p>
+                          <strong>
+                            Glider:
+                          </strong>{' '}
+                          {ski.glideWax ||
+                            'Ikke valgt'}
+                        </p>
+
+                        <p>
+                          <strong>
+                            Topping:
+                          </strong>{' '}
+                          {ski.topping ||
+                            'Ikke valgt'}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </article>
+              )
+            }
+          )}
+        </div>
+      )}
 
       <SkiForm
         existingSkis={
           session.skis
         }
-
+        equipment={
+          equipment
+        }
         onAddSki={
           handleAddSki
         }
       />
-    </>
+    </section>
   )
 }
 

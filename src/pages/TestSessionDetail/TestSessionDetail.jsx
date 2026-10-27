@@ -10,6 +10,7 @@ import './TestSessionDetail.css'
 
 function TestSessionDetail({
   sessions,
+  equipment,
 
   onUpdateSession,
   onDeleteSession,
@@ -223,7 +224,9 @@ function TestSessionDetail({
 
       <SessionCard
         session={session}
+        equipment={equipment}
         defaultOpen={true}
+        
 
         onUpdateSession={
           onUpdateSession

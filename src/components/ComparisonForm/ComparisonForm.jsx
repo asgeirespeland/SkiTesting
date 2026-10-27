@@ -48,6 +48,7 @@ function ComparisonForm({
         glideLeaderId: 'equal',
         glideDifferenceCm: '0',
       }))
+      
 
       return
     }

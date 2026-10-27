@@ -1,23 +1,31 @@
 export const SETUP_FIELDS = [
   {
     name: 'grind',
+    idField: 'grindId',
     label: 'Slip / struktur',
-    placeholder: 'Skriv eller velg slip',
+    placeholder:
+      'Velg slip',
   },
   {
     name: 'rill',
+    idField: 'rillId',
     label: 'Rill',
-    placeholder: 'Skriv eller velg rill',
+    placeholder:
+      'Velg rill',
   },
   {
     name: 'glideWax',
+    idField: 'glideWaxId',
     label: 'Glider',
-    placeholder: 'Skriv eller velg glider',
+    placeholder:
+      'Velg glider',
   },
   {
     name: 'topping',
+    idField: 'toppingId',
     label: 'Topping',
-    placeholder: 'Skriv eller velg topping',
+    placeholder:
+      'Velg topping',
   },
 ]
 
@@ -28,15 +36,26 @@ export function getSetupSuggestions(
   return [
     ...new Set(
       skis
-        .map((ski) => ski[fieldName])
+        .map(
+          (ski) =>
+            ski[fieldName]
+        )
         .filter(
           (value) =>
-            typeof value === 'string' &&
+            typeof value ===
+              'string' &&
             value.trim() !== ''
         )
-        .map((value) => value.trim())
+        .map(
+          (value) =>
+            value.trim()
+        )
     ),
-  ].sort((a, b) =>
-    a.localeCompare(b, 'nb')
+  ].sort(
+    (a, b) =>
+      a.localeCompare(
+        b,
+        'nb'
+      )
   )
 }

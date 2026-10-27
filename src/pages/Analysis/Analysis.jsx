@@ -1,5 +1,11 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import {
+  useMemo,
+  useState,
+} from 'react'
+
+import {
+  Link,
+} from 'react-router-dom'
 
 import {
   SNOW_TYPES,
@@ -15,11 +21,215 @@ import {
   getSetupRecommendations,
 } from '../../utils/setupRecommendations'
 
+import {
+  calculateRecommendationScore,
+} from '../../utils/recommendationScore'
+
 import '../../styles/PageLayout.css'
 import './Analysis.css'
 
+// =========================
+// HJELPEFUNKSJONER
+// =========================
+
+function hasValue(
+  value
+) {
+  return (
+    value !== '' &&
+    value !== null &&
+    value !== undefined
+  )
+}
+
+function toNumberOrNull(
+  value
+) {
+  if (!hasValue(value)) {
+    return null
+  }
+
+  const number =
+    Number(value)
+
+  return Number.isNaN(
+    number
+  )
+    ? null
+    : number
+}
+
+function idsAreEqual(
+  idA,
+  idB
+) {
+  return (
+    String(idA) ===
+    String(idB)
+  )
+}
+
+// =========================
+// VINNER AV TEST
+// =========================
+
+function getWinner(
+  session
+) {
+  const comparisons =
+    session.comparisons ?? []
+
+  const skis =
+    session.skis ?? []
+
+  if (
+    comparisons.length === 0
+  ) {
+    return null
+  }
+
+  const highestRound =
+    Math.max(
+      ...comparisons.map(
+        (comparison) =>
+          Number(
+            comparison.round
+          ) || 0
+      )
+    )
+
+  const finalComparison =
+    comparisons.find(
+      (comparison) =>
+        Number(
+          comparison.round
+        ) === highestRound
+    )
+
+  if (
+    !finalComparison?.winnerId
+  ) {
+    return null
+  }
+
+  return (
+    skis.find(
+      (ski) =>
+        idsAreEqual(
+          ski.id,
+          finalComparison.winnerId
+        )
+    ) ?? null
+  )
+}
+
+// =========================
+// OPPSETT-TEKST
+// =========================
+
+function getSetupText(
+  setup
+) {
+  const parts = [
+    setup.grind,
+    setup.rill,
+    setup.glideWax,
+    setup.topping,
+  ].filter(Boolean)
+
+  if (
+    parts.length === 0
+  ) {
+    return 'Ingen oppsettdata'
+  }
+
+  return parts.join(' • ')
+}
+
+// =========================
+// DATATILLIT
+// =========================
+
+function getConfidenceText(
+  confidence
+) {
+  if (
+    confidence >= 75
+  ) {
+    return 'Høy'
+  }
+
+  if (
+    confidence >= 40
+  ) {
+    return 'Middels'
+  }
+
+  return 'Lav'
+}
+
+// =========================
+// TEMPERATUR
+// =========================
+
+function equipmentHasTemperatureRange(
+  item
+) {
+  return (
+    item &&
+    item.minTemperature !==
+      null &&
+    item.minTemperature !==
+      undefined &&
+    item.minTemperature !==
+      '' &&
+    item.maxTemperature !==
+      null &&
+    item.maxTemperature !==
+      undefined &&
+    item.maxTemperature !==
+      ''
+  )
+}
+
+function isTemperatureMatch(
+  item,
+  snowTemperature
+) {
+  if (
+    !item ||
+    snowTemperature === null
+  ) {
+    return null
+  }
+
+  if (
+    !equipmentHasTemperatureRange(
+      item
+    )
+  ) {
+    return null
+  }
+
+  return (
+    snowTemperature >=
+      Number(
+        item.minTemperature
+      ) &&
+    snowTemperature <=
+      Number(
+        item.maxTemperature
+      )
+  )
+}
+
+// =========================
+// ANALYSE
+// =========================
+
 function Analysis({
-  sessions,
+  sessions = [],
+  equipment = [],
 }) {
   const [
     conditions,
@@ -37,7 +247,9 @@ function Analysis({
   // INPUT
   // =========================
 
-  function handleChange(event) {
+  function handleChange(
+    event
+  ) {
     const {
       name,
       value,
@@ -52,162 +264,331 @@ function Analysis({
   }
 
   // =========================
-  // HAR VI FORHOLD?
+  // NORMALISERTE FORHOLD
   // =========================
 
-  const hasConditions =
-    Object.values(
-      conditions
-    ).some(
-      (value) =>
-        value !== ''
+  const analysisConditions =
+    useMemo(
+      () => ({
+        airTemperature:
+          toNumberOrNull(
+            conditions.airTemperature
+          ),
+
+        snowTemperature:
+          toNumberOrNull(
+            conditions.snowTemperature
+          ),
+
+        humidity:
+          toNumberOrNull(
+            conditions.humidity
+          ),
+
+        snowType:
+          conditions.snowType,
+
+        snowCondition:
+          conditions.snowCondition,
+
+        weather:
+          conditions.weather,
+      }),
+      [conditions]
     )
+
+  const snowTemperature =
+    analysisConditions
+      .snowTemperature
 
   // =========================
   // LIGNENDE TESTØKTER
   // =========================
 
   const matchingSessions =
-    hasConditions
-      ? sessions
+    useMemo(
+      () =>
+        sessions
           .map(
             (session) => ({
               session,
 
               similarity:
                 calculateConditionSimilarity(
-                  conditions,
-                  session.conditions ?? {}
+                  session.conditions ??
+                    {},
+                  analysisConditions
                 ),
             })
+          )
+          .filter(
+            (item) =>
+              item.similarity >
+              0
           )
           .sort(
             (a, b) =>
               b.similarity -
               a.similarity
-          )
-      : []
+          ),
+      [
+        sessions,
+        analysisConditions,
+      ]
+    )
 
   // =========================
-  // ANBEFALINGER
+  // HISTORISKE ANBEFALINGER
   // =========================
 
   const recommendations =
-    hasConditions
-      ? getSetupRecommendations(
+    useMemo(
+      () =>
+        getSetupRecommendations({
           sessions,
-          conditions,
-          {
-            minimumSimilarity: 50,
+
+          conditions:
+            analysisConditions,
+
+          minimumSimilarity:
+            50,
+        }),
+      [
+        sessions,
+        analysisConditions,
+      ]
+    )
+
+  // =========================
+  // SAMLET RANGERING
+  // =========================
+
+  const scoredRecommendations =
+    useMemo(
+      () =>
+        recommendations
+          .map(
+            (
+              recommendation
+            ) => {
+              const score =
+                calculateRecommendationScore({
+                  recommendation,
+
+                  equipment,
+
+                  snowTemperature,
+                })
+
+              return {
+                ...recommendation,
+
+                ...score,
+              }
+            }
+          )
+          .sort(
+            (a, b) => {
+              if (
+                b.combinedScore !==
+                a.combinedScore
+              ) {
+                return (
+                  b.combinedScore -
+                  a.combinedScore
+                )
+              }
+
+              return (
+                b.adjustedWinRate -
+                a.adjustedWinRate
+              )
+            }
+          ),
+      [
+        recommendations,
+        equipment,
+        snowTemperature,
+      ]
+    )
+
+  // =========================
+  // GLIDER/TOPPING FRA KATALOG
+  // =========================
+
+  const temperatureEquipment =
+    useMemo(() => {
+      if (
+        snowTemperature ===
+        null
+      ) {
+        return []
+      }
+
+      return equipment
+        .filter(
+          (item) =>
+            (
+              item.type ===
+                'glideWax' ||
+              item.type ===
+                'topping'
+            ) &&
+            isTemperatureMatch(
+              item,
+              snowTemperature
+            ) === true
+        )
+        .sort(
+          (a, b) => {
+            if (
+              a.type !== b.type
+            ) {
+              return (
+                a.type ===
+                'glideWax'
+                  ? -1
+                  : 1
+              )
+            }
+
+            return (
+              a.name?.localeCompare(
+                b.name,
+                'nb'
+              ) ?? 0
+            )
           }
         )
-      : []
+    }, [
+      equipment,
+      snowTemperature,
+    ])
 
   // =========================
-  // VINNER AV TESTØKT
+  // FINN UTSTYR FRA ID
   // =========================
 
-  function getWinner(session) {
-    if (
-      !session.comparisons?.length
-    ) {
+  function findEquipment(
+    id
+  ) {
+    if (!id) {
       return null
     }
 
-    const highestRound =
-      Math.max(
-        ...session.comparisons.map(
-          (comparison) =>
-            Number(
-              comparison.round ?? 1
-            )
-        )
+    return (
+      equipment.find(
+        (item) =>
+          idsAreEqual(
+            item.id,
+            id
+          )
+      ) ?? null
+    )
+  }
+
+  // =========================
+  // TEMPERATURSTATUS FOR OPPSETT
+  // =========================
+
+  function getRecommendationTemperatureStatus(
+    recommendation
+  ) {
+    if (
+      snowTemperature ===
+      null
+    ) {
+      return {
+        status:
+          'unknown',
+
+        text:
+          'Oppgi snøtemperatur',
+      }
+    }
+
+    const glideWax =
+      findEquipment(
+        recommendation.setup
+          .glideWaxId
       )
 
-    const finalComparison =
-      [...session.comparisons]
-        .reverse()
-        .find(
-          (comparison) =>
-            Number(
-              comparison.round ?? 1
-            ) === highestRound
-        )
+    const topping =
+      findEquipment(
+        recommendation.setup
+          .toppingId
+      )
 
-    if (!finalComparison) {
-      return null
-    }
-
-    return session.skis.find(
-      (ski) =>
-        String(ski.id) ===
-        String(
-          finalComparison.winnerId
-        )
-    )
-  }
-
-  // =========================
-  // OPPSETTSTEKST
-  // =========================
-
-  function getSetupText(
-    setup
-  ) {
-    const parts = [
-      setup.grind,
-      setup.rill,
-      setup.glideWax,
-      setup.topping,
+    const relevantItems = [
+      glideWax,
+      topping,
     ].filter(Boolean)
 
-    return parts.length > 0
-      ? parts.join(' · ')
-      : 'Oppsett ikke registrert'
-  }
-
-  // =========================
-  // DATATILLIT
-  // =========================
-
-  function getConfidenceText(
-    confidence
-  ) {
-    if (confidence >= 75) {
-      return 'Høy'
-    }
-
-    if (confidence >= 40) {
-      return 'Middels'
-    }
-
-    return 'Lav'
-  }
-
-  // =========================
-  // TOTALT ANTALL DUELLER
-  // =========================
-
-  const totalComparisons =
-    sessions.reduce(
-      (
-        total,
-        session
-      ) =>
-        total +
-        (
-          session.comparisons
-            ?.length ?? 0
-        ),
+    if (
+      relevantItems.length ===
       0
-    )
+    ) {
+      return {
+        status:
+          'unknown',
+
+        text:
+          'Ingen temperaturdata',
+      }
+    }
+
+    const itemsWithRange =
+      relevantItems.filter(
+        equipmentHasTemperatureRange
+      )
+
+    if (
+      itemsWithRange.length ===
+      0
+    ) {
+      return {
+        status:
+          'unknown',
+
+        text:
+          'Ingen temperaturdata',
+      }
+    }
+
+    const allMatch =
+      itemsWithRange.every(
+        (item) =>
+          isTemperatureMatch(
+            item,
+            snowTemperature
+          )
+      )
+
+    if (allMatch) {
+      return {
+        status:
+          'match',
+
+        text:
+          'Innenfor temperaturområde',
+      }
+    }
+
+    return {
+      status:
+        'outside',
+
+      text:
+        'Utenfor temperaturområde',
+    }
+  }
+
+  // =========================
+  // VISNING
+  // =========================
 
   return (
     <main className="home">
-      {/* =========================
-          HEADER
-      ========================= */}
-
       <header className="home-header">
         <div>
           <h1>
@@ -215,149 +596,87 @@ function Analysis({
           </h1>
 
           <p>
-            Finn de beste
-            skioppsettene for
-            dagens forhold
+            Finn relevante
+            testøkter og oppsett
+            for dagens forhold.
           </p>
         </div>
       </header>
 
-      {/* =========================
-          DATAGRUNNLAG
-      ========================= */}
-
-      <section className="panel analysis-data">
-        <h2>
-          Datagrunnlag
-        </h2>
-
-        <div className="analysis-data-stats">
-          <div>
-            <strong>
-              {sessions.length}
-            </strong>
-
-            <span>
-              ferdige testøkter
-            </span>
-          </div>
-
-          <div>
-            <strong>
-              {totalComparisons}
-            </strong>
-
-            <span>
-              sammenligninger
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* =========================
+      {/* =====================
           DAGENS FORHOLD
-      ========================= */}
+      ===================== */}
 
       <section className="panel">
-        <div className="analysis-section-heading">
-          <h2>
-            Dagens forhold
-          </h2>
+        <h2>
+          Dagens forhold
+        </h2>
 
-          <p>
-            Fyll inn det du vet.
-            Du trenger ikke fylle
-            ut alle feltene.
-          </p>
-        </div>
+        <p className="analysis-section-description">
+          Jo flere forhold du
+          fyller inn, desto bedre
+          kan tidligere tester
+          sammenlignes.
+        </p>
 
         <div className="analysis-condition-grid">
-          {/* Lufttemperatur */}
-
           <div>
             <label>
               Lufttemperatur
             </label>
 
-            <div className="analysis-number-input">
-              <input
-                type="number"
-                step="0.1"
-                name="airTemperature"
-                value={
-                  conditions
-                    .airTemperature
-                }
-                onChange={
-                  handleChange
-                }
-                placeholder="-5"
-              />
-
-              <span>
-                °C
-              </span>
-            </div>
+            <input
+              type="number"
+              step="0.1"
+              name="airTemperature"
+              value={
+                conditions.airTemperature
+              }
+              onChange={
+                handleChange
+              }
+              placeholder="-5"
+            />
           </div>
-
-          {/* Snøtemperatur */}
 
           <div>
             <label>
               Snøtemperatur
             </label>
 
-            <div className="analysis-number-input">
-              <input
-                type="number"
-                step="0.1"
-                name="snowTemperature"
-                value={
-                  conditions
-                    .snowTemperature
-                }
-                onChange={
-                  handleChange
-                }
-                placeholder="-7"
-              />
-
-              <span>
-                °C
-              </span>
-            </div>
+            <input
+              type="number"
+              step="0.1"
+              name="snowTemperature"
+              value={
+                conditions.snowTemperature
+              }
+              onChange={
+                handleChange
+              }
+              placeholder="-7"
+            />
           </div>
-
-          {/* Luftfuktighet */}
 
           <div>
             <label>
               Luftfuktighet
             </label>
 
-            <div className="analysis-number-input">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                name="humidity"
-                value={
-                  conditions
-                    .humidity
-                }
-                onChange={
-                  handleChange
-                }
-                placeholder="75"
-              />
-
-              <span>
-                %
-              </span>
-            </div>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              name="humidity"
+              value={
+                conditions.humidity
+              }
+              onChange={
+                handleChange
+              }
+              placeholder="70"
+            />
           </div>
-
-          {/* Snøtype */}
 
           <div>
             <label>
@@ -380,17 +699,21 @@ function Analysis({
               {SNOW_TYPES.map(
                 (option) => (
                   <option
-                    key={option}
-                    value={option}
+                    key={
+                      option
+                    }
+                    value={
+                      option
+                    }
                   >
-                    {option}
+                    {
+                      option
+                    }
                   </option>
                 )
               )}
             </select>
           </div>
-
-          {/* Snøforhold */}
 
           <div>
             <label>
@@ -400,8 +723,7 @@ function Analysis({
             <select
               name="snowCondition"
               value={
-                conditions
-                  .snowCondition
+                conditions.snowCondition
               }
               onChange={
                 handleChange
@@ -414,17 +736,21 @@ function Analysis({
               {SNOW_CONDITIONS.map(
                 (option) => (
                   <option
-                    key={option}
-                    value={option}
+                    key={
+                      option
+                    }
+                    value={
+                      option
+                    }
                   >
-                    {option}
+                    {
+                      option
+                    }
                   </option>
                 )
               )}
             </select>
           </div>
-
-          {/* Vær */}
 
           <div>
             <label>
@@ -447,10 +773,16 @@ function Analysis({
               {WEATHER_OPTIONS.map(
                 (option) => (
                   <option
-                    key={option}
-                    value={option}
+                    key={
+                      option
+                    }
+                    value={
+                      option
+                    }
                   >
-                    {option}
+                    {
+                      option
+                    }
                   </option>
                 )
               )}
@@ -459,237 +791,278 @@ function Analysis({
         </div>
       </section>
 
-      {/* =========================
-          ANBEFALINGER
-      ========================= */}
+      {/* =====================
+          TEMPERATURMATCH
+      ===================== */}
 
-      <section className="analysis-results">
-        <div className="analysis-results-heading">
+      <section className="analysis-section">
+        <div className="analysis-section-heading">
+          <div>
+            <h2>
+              Utstyr for temperaturen
+            </h2>
+
+            <p>
+              Glider og topping
+              fra katalogen som
+              dekker oppgitt
+              snøtemperatur.
+            </p>
+          </div>
+        </div>
+
+        {snowTemperature ===
+        null ? (
+          <div className="panel analysis-empty">
+            <p>
+              Oppgi
+              snøtemperatur over
+              for å se passende
+              produkter.
+            </p>
+          </div>
+        ) : temperatureEquipment.length ===
+          0 ? (
+          <div className="panel analysis-empty">
+            <p>
+              Ingen registrerte
+              glidere eller
+              toppinger dekker{' '}
+              <strong>
+                {
+                  snowTemperature
+                }{' '}
+                °C
+              </strong>
+              .
+            </p>
+          </div>
+        ) : (
+          <div className="analysis-temperature-grid">
+            {temperatureEquipment.map(
+              (item) => (
+                <article
+                  key={
+                    item.id
+                  }
+                  className="analysis-temperature-card"
+                >
+                  <span className="analysis-temperature-type">
+                    {item.type ===
+                    'glideWax'
+                      ? 'Glider'
+                      : 'Topping'}
+                  </span>
+
+                  <h3>
+                    {item.brand
+                      ? `${item.brand} ${item.name}`
+                      : item.name}
+                  </h3>
+
+                  <p>
+                    🌡️{' '}
+                    {
+                      item.minTemperature
+                    }{' '}
+                    til{' '}
+                    {
+                      item.maxTemperature
+                    }{' '}
+                    °C
+                  </p>
+
+                  <strong>
+                    Passer ved{' '}
+                    {
+                      snowTemperature
+                    }{' '}
+                    °C
+                  </strong>
+                </article>
+              )
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* =====================
+          ANBEFALTE OPPSETT
+      ===================== */}
+
+      <section className="analysis-section">
+        <div className="analysis-section-heading">
           <div>
             <h2>
               Anbefalte oppsett
             </h2>
 
             <p>
-              Basert på historiske
-              dueller med minst
-              50 % like forhold.
+              Basert på
+              gjennomførte tester
+              med minst 50 %
+              likhet i forhold.
             </p>
           </div>
+
+          <span>
+            {
+              scoredRecommendations.length
+            }{' '}
+            oppsett
+          </span>
         </div>
 
-        {/* Ingen forhold valgt */}
-
-        {!hasConditions && (
+        {scoredRecommendations.length ===
+        0 ? (
           <div className="panel analysis-empty">
-            <h3>
-              Legg inn dagens
-              forhold
-            </h3>
-
             <p>
-              Da kan vi begynne å
-              rangere tidligere
-              skioppsett.
+              Ikke nok relevant
+              testdata ennå.
             </p>
           </div>
-        )}
+        ) : (
+          <div className="analysis-recommendation-grid">
+            {scoredRecommendations.map(
+              (
+                recommendation,
+                index
+              ) => {
+                const temperatureStatus =
+                  getRecommendationTemperatureStatus(
+                    recommendation
+                  )
 
-        {/* Ingen anbefalinger */}
-
-        {hasConditions &&
-          recommendations.length ===
-            0 && (
-            <div className="panel analysis-empty">
-              <h3>
-                Ikke nok relevante
-                data
-              </h3>
-
-              <p>
-                Ingen oppsett har
-                foreløpig blitt
-                testet i forhold som
-                ligner nok.
-              </p>
-            </div>
-          )}
-
-        {/* Anbefalinger */}
-
-        {hasConditions &&
-          recommendations.length >
-            0 && (
-            <div className="recommendation-list">
-              {recommendations.map(
-                (
-                  recommendation,
-                  index
-                ) => (
+                return (
                   <article
                     key={
-                      recommendation.key
+                      recommendation.setupKey
                     }
-                    className={
-                      index === 0
-                        ? 'recommendation-card recommendation-card-best'
-                        : 'recommendation-card'
-                    }
+                    className="analysis-recommendation-card"
                   >
-                    {/* Rangering */}
+                    <div className="analysis-recommendation-top">
+                      <span>
+                        #{index + 1}
+                      </span>
 
-                    <div className="recommendation-rank">
-                      {index === 0
-                        ? '🥇'
-                        : `#${index + 1}`}
+                      <strong>
+                        {recommendation.combinedScore.toFixed(
+                          0
+                        )}
+                        %
+                      </strong>
                     </div>
 
-                    <div className="recommendation-main">
-                      {/* Header */}
+                    <h3>
+                      {getSetupText(
+                        recommendation.setup
+                      )}
+                    </h3>
 
-                      <div className="recommendation-header">
-                        <div>
-                          <h3>
-                            {index === 0
-                              ? 'Anbefalt oppsett'
-                              : `Oppsett ${index + 1}`}
-                          </h3>
+                    <div className="analysis-score-breakdown">
+                      <span>
+                        Testhistorikk:{' '}
+                        <strong>
+                          {recommendation.historicalScore.toFixed(
+                            0
+                          )}
+                          %
+                        </strong>
+                      </span>
 
-                          <p>
-                            {getSetupText(
-                              recommendation.setup
-                            )}
-                          </p>
-                        </div>
+                      <span>
+                        Temperatur:{' '}
+                        <strong>
+                          {recommendation.temperatureScore ===
+                          null
+                            ? 'Ingen data'
+                            : `${recommendation.temperatureScore.toFixed(
+                                0
+                              )}%`}
+                        </strong>
+                      </span>
+                    </div>
 
-                        <div className="recommendation-win-rate">
-                          <strong>
-                            {
-                              recommendation
-                                .adjustedWinRate
-                            }
-                            %
-                          </strong>
+                    <div
+                      className={`analysis-temperature-status ${temperatureStatus.status}`}
+                    >
+                      {temperatureStatus.status ===
+                        'match' &&
+                        '✓ '}
 
-                          <span>
-                            justert
-                            seiersrate
-                          </span>
-                        </div>
-                      </div>
+                      {temperatureStatus.status ===
+                        'outside' &&
+                        '⚠ '}
 
-                      {/* Statistikk */}
+                      {
+                        temperatureStatus.text
+                      }
+                    </div>
 
-                      <div className="recommendation-stats">
-                        <div>
-                          <strong>
-                            {
-                              recommendation
-                                .wins
-                            }
-                            /
-                            {
-                              recommendation
-                                .comparisons
-                            }
-                          </strong>
+                    <div className="analysis-recommendation-stats">
+                      <p>
+                        <strong>
+                          Seire:
+                        </strong>{' '}
+                        {
+                          recommendation.wins
+                        }
+                        /
+                        {
+                          recommendation.comparisons
+                        }
+                      </p>
 
-                          <span>
-                            faktiske
-                            seire
-                          </span>
-                        </div>
+                      <p>
+                        <strong>
+                          Testøkter:
+                        </strong>{' '}
+                        {
+                          recommendation.relevantSessionCount
+                        }
+                      </p>
 
-                        <div>
-                          <strong>
-                            {
-                              recommendation
-                                .relevantSessionCount
-                            }
-                          </strong>
+                      <p>
+                        <strong>
+                          Gj.snittscore:
+                        </strong>{' '}
+                        {recommendation.weightedAverageScore.toFixed(
+                          1
+                        )}
+                      </p>
 
-                          <span>
-                            relevante
-                            testøkter
-                          </span>
-                        </div>
+                      <p>
+                        <strong>
+                          Datatillit:
+                        </strong>{' '}
+                        {getConfidenceText(
+                          recommendation.dataConfidence
+                        )}
+                      </p>
+                    </div>
 
-                        <div>
-                          <strong>
-                            {
-                              recommendation
-                                .weightedAverageScore >
-                              0
-                                ? '+'
-                                : ''
-                            }
-
-                            {
-                              recommendation
-                                .weightedAverageScore
-                            }
-                          </strong>
-
-                          <span>
-                            gj.snittscore
-                          </span>
-                        </div>
-
-                        <div>
-                          <strong>
-                            {getConfidenceText(
-                              recommendation
-                                .dataConfidence
-                            )}
-                          </strong>
-
-                          <span>
-                            datatillit
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Datagrunnlag */}
-
-                      <div className="recommendation-confidence">
-                        <div className="recommendation-confidence-top">
-                          <span>
-                            Datagrunnlag
-                          </span>
-
-                          <span>
-                            {
-                              recommendation
-                                .dataConfidence
-                            }
-                            %
-                          </span>
-                        </div>
-
-                        <div className="recommendation-confidence-track">
-                          <div
-                            className="recommendation-confidence-value"
-                            style={{
-                              width:
-                                `${recommendation.dataConfidence}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
+                    <div className="analysis-confidence">
+                      <div
+                        className="analysis-confidence-bar"
+                        style={{
+                          width: `${recommendation.dataConfidence}%`,
+                        }}
+                      />
                     </div>
                   </article>
                 )
-              )}
-            </div>
-          )}
+              }
+            )}
+          </div>
+        )}
       </section>
 
-      {/* =========================
+      {/* =====================
           LIGNENDE TESTØKTER
-      ========================= */}
+      ===================== */}
 
-      <section className="analysis-results">
-        <div className="analysis-results-heading">
+      <section className="analysis-section">
+        <div className="analysis-section-heading">
           <div>
             <h2>
               Lignende testøkter
@@ -698,261 +1071,125 @@ function Analysis({
             <p>
               Historiske tester
               sortert etter hvor
-              like forholdene var.
+              like forholdene er.
             </p>
           </div>
 
-          {hasConditions && (
-            <span>
-              {
-                matchingSessions
-                  .length
-              }{' '}
-              treff
-            </span>
-          )}
+          <span>
+            {
+              matchingSessions.length
+            }{' '}
+            tester
+          </span>
         </div>
 
-        {/* Ingen forhold */}
-
-        {!hasConditions && (
+        {matchingSessions.length ===
+        0 ? (
           <div className="panel analysis-empty">
             <p>
-              Legg inn dagens forhold
-              for å finne lignende
-              tidligere tester.
+              Ingen relevante
+              testøkter funnet.
             </p>
           </div>
-        )}
-
-        {/* Ingen historiske tester */}
-
-        {hasConditions &&
-          sessions.length === 0 && (
-            <div className="panel analysis-empty">
-              <h3>
-                Ingen historiske
-                tester ennå
-              </h3>
-
-              <p>
-                Fullfør noen
-                testøkter først.
-              </p>
-            </div>
-          )}
-
-        {/* Testøkter */}
-
-        {hasConditions &&
-          matchingSessions.length >
-            0 && (
-            <div className="analysis-match-list">
-              {matchingSessions.map(
-                ({
-                  session,
-                  similarity,
-                }) => {
-                  const winner =
-                    getWinner(
-                      session
-                    )
-
-                  return (
-                    <article
-                      key={
-                        session.id
-                      }
-                      className="analysis-match-card"
-                    >
-                      {/* Header */}
-
-                      <div className="analysis-match-top">
-                        <div>
-                          <h3>
-                            {
-                              session.title
-                            }
-                          </h3>
-
-                          <p>
-                            {session.location ||
-                              'Sted ikke registrert'}
-                          </p>
-                        </div>
-
-                        <div
-                          className={
-                            similarity >=
-                            80
-                              ? 'analysis-similarity analysis-similarity-high'
-                              : similarity >=
-                                  60
-                                ? 'analysis-similarity analysis-similarity-medium'
-                                : 'analysis-similarity'
-                          }
-                        >
-                          <strong>
-                            {
-                              similarity
-                            }
-                            %
-                          </strong>
-
-                          <span>
-                            likhet
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Forhold */}
-
-                      <div className="analysis-match-conditions">
-                        {session
-                          .conditions
-                          ?.airTemperature !==
-                          null &&
-                          session
-                            .conditions
-                            ?.airTemperature !==
-                            undefined && (
-                            <span>
-                              🌡️{' '}
-                              {
-                                session
-                                  .conditions
-                                  .airTemperature
-                              }{' '}
-                              °C
-                            </span>
-                          )}
-
-                        {session
-                          .conditions
-                          ?.snowTemperature !==
-                          null &&
-                          session
-                            .conditions
-                            ?.snowTemperature !==
-                            undefined && (
-                            <span>
-                              ❄️{' '}
-                              {
-                                session
-                                  .conditions
-                                  .snowTemperature
-                              }{' '}
-                              °C
-                            </span>
-                          )}
-
-                        {session
-                          .conditions
-                          ?.humidity !==
-                          null &&
-                          session
-                            .conditions
-                            ?.humidity !==
-                            undefined && (
-                            <span>
-                              💧{' '}
-                              {
-                                session
-                                  .conditions
-                                  .humidity
-                              }
-                              %
-                            </span>
-                          )}
-
-                        {session
-                          .conditions
-                          ?.snowType && (
-                          <span>
-                            {
-                              session
-                                .conditions
-                                .snowType
-                            }
-                          </span>
-                        )}
-
-                        {session
-                          .conditions
-                          ?.snowCondition && (
-                          <span>
-                            {
-                              session
-                                .conditions
-                                .snowCondition
-                            }
-                          </span>
-                        )}
-
-                        {session
-                          .conditions
-                          ?.weather && (
-                          <span>
-                            {
-                              session
-                                .conditions
-                                .weather
-                            }
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Bunn */}
-
-                      <div className="analysis-match-bottom">
-                        <span className="analysis-match-date">
-                          {
-                            session.date ||
-                            'Ingen dato'
-                          }
-
-                          {session.time &&
-                            ` · ${session.time}`}
-                        </span>
-
-                        {winner && (
-                          <div className="analysis-match-winner">
-                            🏆 Ski{' '}
-                            {
-                              winner
-                                .skiNumber
-                            }
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Link */}
-
-                      <div className="analysis-match-actions">
-                        <Link
-                          to={`/historikk/${session.id}`}
-                        >
-                          Se testøkt
-                        </Link>
-                      </div>
-
-                      {/* Likhetslinje */}
-
-                      <div className="analysis-similarity-track">
-                        <div
-                          className="analysis-similarity-value"
-                          style={{
-                            width:
-                              `${similarity}%`,
-                          }}
-                        />
-                      </div>
-                    </article>
+        ) : (
+          <div className="analysis-session-grid">
+            {matchingSessions.map(
+              ({
+                session,
+                similarity,
+              }) => {
+                const winner =
+                  getWinner(
+                    session
                   )
-                }
-              )}
-            </div>
-          )}
+
+                return (
+                  <article
+                    key={
+                      session.id
+                    }
+                    className="analysis-session-card"
+                  >
+                    <div className="analysis-session-card-top">
+                      <div>
+                        <h3>
+                          {
+                            session.title
+                          }
+                        </h3>
+
+                        <p>
+                          {session.location ||
+                            'Ukjent sted'}
+                        </p>
+                      </div>
+
+                      <strong>
+                        {
+                          similarity
+                        }{' '}
+                        %
+                      </strong>
+                    </div>
+
+                    <div className="analysis-session-meta">
+                      <span>
+                        {
+                          session.date
+                        }
+                      </span>
+
+                      {hasValue(
+                        session
+                          .conditions
+                          ?.snowTemperature
+                      ) && (
+                        <span>
+                          Snø:{' '}
+                          {
+                            session
+                              .conditions
+                              .snowTemperature
+                          }{' '}
+                          °C
+                        </span>
+                      )}
+
+                      <span>
+                        {
+                          session.skis
+                            ?.length ??
+                          0
+                        }{' '}
+                        ski
+                      </span>
+                    </div>
+
+                    {winner && (
+                      <p className="analysis-session-winner">
+                        🏆 Ski{' '}
+                        {
+                          winner.skiNumber
+                        }
+                        {' – '}
+                        {getSetupText(
+                          winner
+                        )}
+                      </p>
+                    )}
+
+                    <Link
+                      to={`/historikk/${session.id}`}
+                      className="analysis-session-link"
+                    >
+                      Se testøkt
+                    </Link>
+                  </article>
+                )
+              }
+            )}
+          </div>
+        )}
       </section>
     </main>
   )

@@ -14,7 +14,10 @@
   display: grid;
 
   grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
 
   gap: 16px 18px;
 }
@@ -31,7 +34,8 @@
   font-weight: 600;
 }
 
-.ski-form-grid input {
+.ski-form-grid input,
+.ski-form-grid select {
   width: 100%;
 
   padding: 10px 12px;
@@ -44,10 +48,18 @@
   font: inherit;
 }
 
-.ski-form-grid input:focus {
+.ski-form-grid input:focus,
+.ski-form-grid select:focus {
   outline: none;
 
   border-color: #555;
+}
+
+.ski-form-no-equipment {
+  color: #777;
+
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .ski-form > button {
@@ -59,7 +71,7 @@
   border-radius: 8px;
 
   background: #222;
-  color: rgb(0, 0, 0);
+  color: white;
 
   font-weight: 600;
 
@@ -70,9 +82,12 @@
   background: #444;
 }
 
-@media (max-width: 700px) {
+@media (
+  max-width: 700px
+) {
   .ski-form-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      1fr;
   }
 
   .ski-form > button {

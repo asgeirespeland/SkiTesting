@@ -18,6 +18,7 @@ import './SessionCard.css'
 
 function SessionCard({
   session,
+  equipment,
   defaultOpen = false,
 
   onAddSki,
@@ -225,6 +226,10 @@ function SessionCard({
           <SkiSection
             session={
               session
+            }
+
+            equipment={
+              equipment
             }
 
             onAddSki={
