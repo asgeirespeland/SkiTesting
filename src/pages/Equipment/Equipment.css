@@ -297,4 +297,90 @@
     font-size: 11px;
     line-height: 1.4;
     }
+
+
+    /* =========================
+      FØREPROFIL
+    ========================= */
+
+    .equipment-profile-field {
+      grid-column: span 1;
+    }
+
+    .equipment-checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+
+      gap: 8px;
+    }
+
+    .equipment-checkbox-option {
+      display: flex;
+      align-items: center;
+
+      gap: 7px;
+
+      padding: 8px 11px;
+
+      border: 1px solid #ddd;
+      border-radius: 8px;
+
+      background: white;
+
+      font-size: 13px;
+
+      cursor: pointer;
+    }
+
+    .equipment-checkbox-option input {
+      width: auto;
+
+      margin: 0;
+    }
+
+    .equipment-checkbox-option:has(input:checked) {
+      border-color: #555;
+
+      background: #f3f3f3;
+    }
+
+    .equipment-profile {
+      margin-top: 14px;
+    }
+
+    .equipment-profile > strong {
+      display: block;
+
+      margin-bottom: 7px;
+
+      font-size: 12px;
+    }
+
+    .equipment-tags {
+      display: flex;
+      flex-wrap: wrap;
+
+      gap: 6px;
+    }
+
+    .equipment-tag {
+      padding: 5px 8px;
+
+      border-radius: 999px;
+
+      background: #f0f0f0;
+
+      font-size: 11px;
+    }
+
+
+    /* =========================
+      MOBIL
+    ========================= */
+
+    @media (max-width: 700px) {
+      .equipment-profile-field {
+        grid-column: auto;
+      }
+    }
 }

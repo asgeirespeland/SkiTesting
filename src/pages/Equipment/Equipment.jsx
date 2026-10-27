@@ -9,19 +9,52 @@ import {
   usesTemperatureRange,
 } from '../../config/equipmentTypes'
 
+import {
+  SNOW_TYPES,
+  SNOW_CONDITIONS,
+} from '../../config/conditionOptions'
+
+
 import '../../styles/PageLayout.css'
 import './Equipment.css'
+
+// =========================
+// TOMT SKJEMA
+// =========================
 
 function getEmptyForm() {
   return {
     type: 'grind',
+
     name: '',
     brand: '',
+
     minTemperature: '',
     maxTemperature: '',
+
+    snowTypes: [],
+    snowConditions: [],
+
     notes: '',
   }
 }
+
+// =========================
+// HAR FØREPROFIL?
+// =========================
+
+function usesSnowProfile(
+  type
+) {
+  return (
+    type === 'grind' ||
+    type === 'rill'
+  )
+}
+
+// =========================
+// EQUIPMENT
+// =========================
 
 function Equipment({
   equipment,
@@ -54,8 +87,13 @@ function Equipment({
       formData.type
     )
 
+  const showSnowProfile =
+    usesSnowProfile(
+      formData.type
+    )
+
   // =========================
-  // INPUT
+  // VANLIG INPUT
   // =========================
 
   function handleChange(
@@ -66,14 +104,18 @@ function Equipment({
       value,
     } = event.target
 
-    /*
-     * Hvis type endres fra f.eks.
-     * glider til slip, rydder vi
-     * temperaturfeltene.
-     */
+    // =====================
+    // TYPE ENDRES
+    // =====================
+
     if (name === 'type') {
       const newTypeUsesTemperature =
         usesTemperatureRange(
+          value
+        )
+
+      const newTypeUsesSnowProfile =
+        usesSnowProfile(
           value
         )
 
@@ -83,15 +125,38 @@ function Equipment({
 
           type: value,
 
+          /*
+           * Behold temperatur bare
+           * dersom den nye typen
+           * bruker temperatur.
+           */
           minTemperature:
             newTypeUsesTemperature
-              ? currentData.minTemperature
+              ? currentData
+                  .minTemperature
               : '',
 
           maxTemperature:
             newTypeUsesTemperature
-              ? currentData.maxTemperature
+              ? currentData
+                  .maxTemperature
               : '',
+
+          /*
+           * Behold føreprofil bare
+           * for slip/rill.
+           */
+          snowTypes:
+            newTypeUsesSnowProfile
+              ? currentData
+                  .snowTypes
+              : [],
+
+          snowConditions:
+            newTypeUsesSnowProfile
+              ? currentData
+                  .snowConditions
+              : [],
         })
       )
 
@@ -101,8 +166,49 @@ function Equipment({
     setFormData(
       (currentData) => ({
         ...currentData,
+
         [name]: value,
       })
+    )
+  }
+
+  // =========================
+  // CHECKBOX
+  // =========================
+
+  function handleCheckboxChange(
+    field,
+    value
+  ) {
+    setFormData(
+      (currentData) => {
+        const currentValues =
+          currentData[field] ??
+          []
+
+        const alreadySelected =
+          currentValues.includes(
+            value
+          )
+
+        return {
+          ...currentData,
+
+          [field]:
+            alreadySelected
+              ? currentValues.filter(
+                  (
+                    currentValue
+                  ) =>
+                    currentValue !==
+                    value
+                )
+              : [
+                  ...currentValues,
+                  value,
+                ],
+        }
+      }
     )
   }
 
@@ -138,9 +244,8 @@ function Equipment({
       ''
 
     /*
-     * Tillater at begge er tomme,
-     * men ikke at bare én side
-     * av intervallet er oppgitt.
+     * Enten begge temperaturene,
+     * eller ingen.
      */
     if (
       hasMin !== hasMax
@@ -222,6 +327,10 @@ function Equipment({
       brand:
         formData.brand.trim(),
 
+      // =====================
+      // TEMPERATUR
+      // =====================
+
       minTemperature:
         showTemperatureRange &&
         formData.minTemperature !==
@@ -239,6 +348,26 @@ function Equipment({
               formData.maxTemperature
             )
           : null,
+
+      // =====================
+      // FØREPROFIL
+      // =====================
+
+      snowTypes:
+        showSnowProfile
+          ? [
+              ...formData
+                .snowTypes,
+            ]
+          : [],
+
+      snowConditions:
+        showSnowProfile
+          ? [
+              ...formData
+                .snowConditions,
+            ]
+          : [],
 
       notes:
         formData.notes.trim(),
@@ -285,6 +414,14 @@ function Equipment({
       maxTemperature:
         item.maxTemperature ??
         '',
+
+      snowTypes:
+        item.snowTypes ??
+        [],
+
+      snowConditions:
+        item.snowConditions ??
+        [],
 
       notes:
         item.notes ?? '',
@@ -338,6 +475,10 @@ function Equipment({
       )
   )
 
+  // =========================
+  // VISNING
+  // =========================
+
   return (
     <main className="home">
       <header className="home-header">
@@ -349,7 +490,7 @@ function Equipment({
           <p>
             Administrer slip,
             rill, glider og
-            topping
+            topping.
           </p>
         </div>
       </header>
@@ -393,7 +534,9 @@ function Equipment({
             handleSubmit
           }
         >
-          {/* TYPE */}
+          {/* =====================
+              TYPE
+          ===================== */}
 
           <div className="equipment-field">
             <label>
@@ -419,14 +562,18 @@ function Equipment({
                       type.value
                     }
                   >
-                    {type.label}
+                    {
+                      type.label
+                    }
                   </option>
                 )
               )}
             </select>
           </div>
 
-          {/* NAVN */}
+          {/* =====================
+              NAVN
+          ===================== */}
 
           <div className="equipment-field">
             <label>
@@ -451,7 +598,9 @@ function Equipment({
             />
           </div>
 
-          {/* PRODUSENT */}
+          {/* =====================
+              PRODUSENT
+          ===================== */}
 
           <div className="equipment-field">
             <label>
@@ -529,14 +678,123 @@ function Equipment({
                 </div>
 
                 <small className="equipment-field-hint">
-                  Produktets anbefalte
+                  Produktets
+                  anbefalte
                   temperaturintervall.
                 </small>
               </div>
             </>
           )}
 
-          {/* NOTATER */}
+          {/* =====================
+              SNØTYPE FOR SLIP/RILL
+          ===================== */}
+
+          {showSnowProfile && (
+            <div className="equipment-field equipment-profile-field">
+              <label>
+                Passer snøtype
+              </label>
+
+              <div className="equipment-checkbox-group">
+                {SNOW_TYPES.map(
+                  (snowType) => (
+                    <label
+                      key={
+                        snowType
+                      }
+                      className="equipment-checkbox-option"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          formData.snowTypes.includes(
+                            snowType
+                          )
+                        }
+                        onChange={() =>
+                          handleCheckboxChange(
+                            'snowTypes',
+                            snowType
+                          )
+                        }
+                      />
+
+                      <span>
+                        {
+                          snowType
+                        }
+                      </span>
+                    </label>
+                  )
+                )}
+              </div>
+
+              <small className="equipment-field-hint">
+                Du kan velge
+                flere typer.
+              </small>
+            </div>
+          )}
+
+          {/* =====================
+              SNØFORHOLD FOR SLIP/RILL
+          ===================== */}
+
+          {showSnowProfile && (
+            <div className="equipment-field equipment-profile-field">
+              <label>
+                Passer snøforhold
+              </label>
+
+              <div className="equipment-checkbox-group">
+                {SNOW_CONDITIONS.map(
+                  (
+                    snowCondition
+                  ) => (
+                    <label
+                      key={
+                        snowCondition
+                      }
+                      className="equipment-checkbox-option"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          formData.snowConditions.includes(
+                            snowCondition
+                          )
+                        }
+                        onChange={() =>
+                          handleCheckboxChange(
+                            'snowConditions',
+                            snowCondition
+                          )
+                        }
+                      />
+
+                      <span>
+                        {
+                          snowCondition
+                        }
+                      </span>
+                    </label>
+                  )
+                )}
+              </div>
+
+              <small className="equipment-field-hint">
+                Velg forholdene
+                slipen eller
+                rillen er aktuell
+                for.
+              </small>
+            </div>
+          )}
+
+          {/* =====================
+              NOTATER
+          ===================== */}
 
           <div className="equipment-field equipment-notes-field">
             <label>
@@ -554,10 +812,10 @@ function Equipment({
               placeholder={
                 formData.type ===
                 'grind'
-                  ? 'F.eks. snøtype eller forhold slipen fungerer godt i'
+                  ? 'F.eks. spesielle forhold der slipen fungerer godt'
                   : formData.type ===
                     'rill'
-                  ? 'F.eks. rett, brutt eller aktuell snøtype'
+                  ? 'F.eks. rett, brutt eller hvordan rillen brukes'
                   : 'Valgfritt'
               }
               rows="3"
@@ -605,9 +863,9 @@ function Equipment({
             </h3>
 
             <p>
-              Legg til første slip,
-              rill, glider eller
-              topping over.
+              Legg til første
+              slip, rill, glider
+              eller topping over.
             </p>
           </div>
         ) : (
@@ -630,18 +888,23 @@ function Equipment({
                   >
                     <div className="equipment-group-heading">
                       <h3>
-                        {type.label}
+                        {
+                          type.label
+                        }
                       </h3>
 
                       <span>
-                        {items.length}
+                        {
+                          items.length
+                        }
                       </span>
                     </div>
 
                     {items.length ===
                     0 ? (
                       <p className="equipment-group-empty">
-                        Ingen registrert
+                        Ingen
+                        registrert
                       </p>
                     ) : (
                       <div className="equipment-grid">
@@ -657,6 +920,20 @@ function Equipment({
                                 item.maxTemperature !==
                                   null
                               )
+
+                            const hasSnowTypes =
+                              (
+                                item.snowTypes ??
+                                []
+                              ).length >
+                              0
+
+                            const hasSnowConditions =
+                              (
+                                item.snowConditions ??
+                                []
+                              ).length >
+                              0
 
                             return (
                               <article
@@ -689,6 +966,8 @@ function Equipment({
                                   </div>
                                 </div>
 
+                                {/* TEMPERATUR */}
+
                                 {hasTemperature && (
                                   <div className="equipment-temperature">
                                     🌡️{' '}
@@ -700,6 +979,66 @@ function Equipment({
                                     {' °C'}
                                   </div>
                                 )}
+
+                                {/* SNØTYPE */}
+
+                                {hasSnowTypes && (
+                                  <div className="equipment-profile">
+                                    <strong>
+                                      Snøtype
+                                    </strong>
+
+                                    <div className="equipment-tags">
+                                      {item.snowTypes.map(
+                                        (
+                                          snowType
+                                        ) => (
+                                          <span
+                                            key={
+                                              snowType
+                                            }
+                                            className="equipment-tag"
+                                          >
+                                            {
+                                              snowType
+                                            }
+                                          </span>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* SNØFORHOLD */}
+
+                                {hasSnowConditions && (
+                                  <div className="equipment-profile">
+                                    <strong>
+                                      Snøforhold
+                                    </strong>
+
+                                    <div className="equipment-tags">
+                                      {item.snowConditions.map(
+                                        (
+                                          condition
+                                        ) => (
+                                          <span
+                                            key={
+                                              condition
+                                            }
+                                            className="equipment-tag"
+                                          >
+                                            {
+                                              condition
+                                            }
+                                          </span>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* NOTATER */}
 
                                 {item.notes && (
                                   <p className="equipment-notes">

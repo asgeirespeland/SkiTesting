@@ -26,10 +26,6 @@ function findEquipmentItem({
   name,
   type,
 }) {
-  /*
-   * Nye tester:
-   * bruk stabil equipment-ID.
-   */
   if (
     id !== null &&
     id !== undefined &&
@@ -47,10 +43,6 @@ function findEquipmentItem({
     }
   }
 
-  /*
-   * Gamle tester kan mangle ID.
-   * Da prøver vi lagret navn.
-   */
   const normalizedName =
     normalizeText(name)
 
@@ -84,7 +76,7 @@ function findEquipmentItem({
 }
 
 // =========================
-// HAR TEMPERATURINTERVALL?
+// TEMPERATURINTERVALL
 // =========================
 
 function hasTemperatureRange(
@@ -108,7 +100,7 @@ function hasTemperatureRange(
 }
 
 // =========================
-// TEMPERATURPASSFORM
+// TEMPERATURSCORE
 // =========================
 
 export function calculateTemperatureFit(
@@ -138,10 +130,6 @@ export function calculateTemperatureFit(
       item.maxTemperature
     )
 
-  /*
-   * Inne i produsentens
-   * anbefalte intervall.
-   */
   if (
     temperature >= min &&
     temperature <= max
@@ -149,10 +137,6 @@ export function calculateTemperatureFit(
     return 100
   }
 
-  /*
-   * Hvor mange grader ligger
-   * temperaturen utenfor?
-   */
   let difference = 0
 
   if (
@@ -170,8 +154,6 @@ export function calculateTemperatureFit(
   }
 
   /*
-   * Gradvis straff.
-   *
    * 1 °C utenfor = 80
    * 2 °C utenfor = 60
    * 3 °C utenfor = 40
@@ -182,6 +164,124 @@ export function calculateTemperatureFit(
     0,
     100 -
       difference * 20
+  )
+}
+
+// =========================
+// FØREPROFIL
+// =========================
+
+function hasSnowTypeProfile(
+  item
+) {
+  return (
+    Array.isArray(
+      item?.snowTypes
+    ) &&
+    item.snowTypes.length >
+      0
+  )
+}
+
+function hasSnowConditionProfile(
+  item
+) {
+  return (
+    Array.isArray(
+      item?.snowConditions
+    ) &&
+    item.snowConditions
+      .length > 0
+  )
+}
+
+// =========================
+// SCORE FOR SNØTYPE
+// =========================
+
+function calculateSnowTypeFit(
+  item,
+  snowType
+) {
+  if (
+    !snowType ||
+    !hasSnowTypeProfile(
+      item
+    )
+  ) {
+    return null
+  }
+
+  return item.snowTypes.includes(
+    snowType
+  )
+    ? 100
+    : 0
+}
+
+// =========================
+// SCORE FOR SNØFORHOLD
+// =========================
+
+function calculateSnowConditionFit(
+  item,
+  snowCondition
+) {
+  if (
+    !snowCondition ||
+    !hasSnowConditionProfile(
+      item
+    )
+  ) {
+    return null
+  }
+
+  return item.snowConditions.includes(
+    snowCondition
+  )
+    ? 100
+    : 0
+}
+
+// =========================
+// FØRESCORE FOR ÉN DEL
+// =========================
+
+function calculateEquipmentSnowFit(
+  item,
+  conditions
+) {
+  if (!item) {
+    return null
+  }
+
+  const scores = [
+    calculateSnowTypeFit(
+      item,
+      conditions.snowType
+    ),
+
+    calculateSnowConditionFit(
+      item,
+      conditions.snowCondition
+    ),
+  ].filter(
+    (score) =>
+      score !== null
+  )
+
+  if (
+    scores.length === 0
+  ) {
+    return null
+  }
+
+  return (
+    scores.reduce(
+      (sum, score) =>
+        sum + score,
+      0
+    ) / scores.length
   )
 }
 
@@ -260,13 +360,141 @@ export function getSetupTemperatureFit({
 }
 
 // =========================
+// FØRESCORE FOR OPPSETT
+// =========================
+
+export function getSetupSnowFit({
+  setup,
+  equipment = [],
+  conditions = {},
+}) {
+  const grind =
+    findEquipmentItem({
+      equipment,
+
+      id:
+        setup.grindId,
+
+      name:
+        setup.grind,
+
+      type:
+        'grind',
+    })
+
+  const rill =
+    findEquipmentItem({
+      equipment,
+
+      id:
+        setup.rillId,
+
+      name:
+        setup.rill,
+
+      type:
+        'rill',
+    })
+
+  const scores = [
+    calculateEquipmentSnowFit(
+      grind,
+      conditions
+    ),
+
+    calculateEquipmentSnowFit(
+      rill,
+      conditions
+    ),
+  ].filter(
+    (score) =>
+      score !== null
+  )
+
+  if (
+    scores.length === 0
+  ) {
+    return null
+  }
+
+  return (
+    scores.reduce(
+      (sum, score) =>
+        sum + score,
+      0
+    ) / scores.length
+  )
+}
+
+// =========================
+// PRODUKTSCORE
+// =========================
+
+function calculateProductFit({
+  setup,
+  equipment,
+  conditions,
+}) {
+  const temperatureScore =
+    getSetupTemperatureFit({
+      setup,
+      equipment,
+
+      snowTemperature:
+        conditions
+          .snowTemperature,
+    })
+
+  const snowFitScore =
+    getSetupSnowFit({
+      setup,
+      equipment,
+      conditions,
+    })
+
+  const scores = [
+    temperatureScore,
+    snowFitScore,
+  ].filter(
+    (score) =>
+      score !== null
+  )
+
+  if (
+    scores.length === 0
+  ) {
+    return {
+      productScore:
+        null,
+
+      temperatureScore,
+
+      snowFitScore,
+    }
+  }
+
+  return {
+    productScore:
+      scores.reduce(
+        (sum, score) =>
+          sum + score,
+        0
+      ) / scores.length,
+
+    temperatureScore,
+
+    snowFitScore,
+  }
+}
+
+// =========================
 // SAMLET ANBEFALINGSSCORE
 // =========================
 
 export function calculateRecommendationScore({
   recommendation,
   equipment = [],
-  snowTemperature,
+  conditions = {},
 }) {
   const historicalScore =
     Number(
@@ -274,22 +502,27 @@ export function calculateRecommendationScore({
         .adjustedWinRate
     ) || 0
 
-  const temperatureScore =
-    getSetupTemperatureFit({
+  const {
+    productScore,
+    temperatureScore,
+    snowFitScore,
+  } =
+    calculateProductFit({
       setup:
         recommendation.setup,
 
       equipment,
 
-      snowTemperature,
+      conditions,
     })
 
   /*
-   * Hvis vi ikke har temperaturdata,
-   * bruker vi kun testhistorikken.
+   * Hvis katalogen ikke gir
+   * noe ekstra informasjon,
+   * bruker vi bare historikken.
    */
   if (
-    temperatureScore === null
+    productScore === null
   ) {
     return {
       combinedScore:
@@ -297,24 +530,28 @@ export function calculateRecommendationScore({
 
       historicalScore,
 
-      temperatureScore:
+      productScore:
         null,
 
-      hasTemperatureData:
+      temperatureScore,
+
+      snowFitScore,
+
+      hasProductData:
         false,
     }
   }
 
   /*
-   * 75 % egne tester
-   * 25 % produktets temperaturmatch.
+   * Egne testresultater teller mest.
    *
-   * Testdata får størst betydning.
+   * 75 % historikk
+   * 25 % katalog/føredata
    */
   const combinedScore =
     historicalScore *
       0.75 +
-    temperatureScore *
+    productScore *
       0.25
 
   return {
@@ -322,9 +559,13 @@ export function calculateRecommendationScore({
 
     historicalScore,
 
+    productScore,
+
     temperatureScore,
 
-    hasTemperatureData:
+    snowFitScore,
+
+    hasProductData:
       true,
   }
 }

@@ -377,7 +377,8 @@ function Analysis({
 
                   equipment,
 
-                  snowTemperature,
+                  conditions:
+                    analysisConditions,
                 })
 
               return {
@@ -408,7 +409,7 @@ function Analysis({
       [
         recommendations,
         equipment,
-        snowTemperature,
+        analysisConditions,
       ]
     )
 
@@ -977,6 +978,18 @@ function Analysis({
                           null
                             ? 'Ingen data'
                             : `${recommendation.temperatureScore.toFixed(
+                                0
+                              )}%`}
+                        </strong>
+                      </span>
+
+                      <span>
+                        Føreprofil:{' '}
+                        <strong>
+                          {recommendation.snowFitScore ===
+                          null
+                            ? 'Ingen data'
+                            : `${recommendation.snowFitScore.toFixed(
                                 0
                               )}%`}
                         </strong>
